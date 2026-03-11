@@ -513,13 +513,13 @@ function hostStart() {
 //  CARD REVEAL
 // ══════════════════════════════════════
 function buildCardFront(a) {
-  const roleDisplay = a.role === 'mr-white' ? 'Mr. White' : 'Civil';
-  const emoji = a.role === 'mr-white' ? '❓' : (a.role === 'undercover' ? '🕵️' : '👤');
-  // Neutral display — same look for civilian and undercover
-  // Only the word itself differs, no color/icon leaking role
+  const imgHTML = a.image
+    ? `<img src="${a.image}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid var(--ink);background:#ddd" onerror="this.outerHTML='<div style=width:110px;height:110px;border-radius:50%;background:#e0d9cc;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:38px>🎭</div>'">`
+    : `<div style="width:110px;height:110px;border-radius:50%;background:#e0d9cc;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:38px">${a.role==='mr-white'?'❓':'🎭'}</div>`;
+
   document.getElementById('card-front').innerHTML = `
     <span class="role-tag">Ton rôle</span>
-    <div class="char-emoji">${a.role === 'mr-white' ? '❓' : '🎭'}</div>
+    ${imgHTML}
     ${a.role === 'mr-white'
       ? `<div class="char-name unk">Rôle caché</div><div class="char-hint">Tu ne connais pas le perso.<br>Bluff pour survivre !</div>`
       : `<div class="char-name">${a.word}</div><div class="char-hint">Décris ce perso sans le nommer !</div>`
