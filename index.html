@@ -1381,9 +1381,9 @@ Critères :
 - Exemples parfaits : Naruto/Deku, Goku/Saitama, Levi/Zoro, Rem/Zero Two, Mikasa/Erza
 Utilise des noms EXACTS tels qu'ils apparaissent dans MyAnimeList.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const resp = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.anthropic.com/v1/messages'), {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','x-anthropic-version':'2023-06-01'},
     body: JSON.stringify({
       model:'claude-sonnet-4-20250514',
       max_tokens:300,
