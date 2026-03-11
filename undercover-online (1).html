@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNDERCOVER — Animé Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update, push, remove }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ── Firebase config ──
+const app = initializeApp({
+  apiKey: "AIzaSyDQy1wkHa2jQw-GbRgHcK_K9RuTCnsKS8w",
+  authDomain: "online-undercover-anime.firebaseapp.com",
+  databaseURL: "https://online-undercover-anime-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "online-undercover-anime",
+  storageBucket: "online-undercover-anime.firebasestorage.app",
+  messagingSenderId: "145523236546",
+  appId: "1:145523236546:web:32957b6f1d07285ce9e55b",
+  measurementId: "G-43DGF4Y5D0"
+});
+const db = getDatabase(app);
+
+// ── Expose to global scope ──
+window._fb = { ref, set, get, onValue, update, push, remove, db };
+window._fbReady = true;
+window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --red: #e8002d;
+  --red-dark: #9e001f;
+  --yellow: #ffd000;
+  --bg: #080808;
+  --surface: #111;
+  --surface2: #181818;
+  --border: #222;
+  --paper: #f2ede3;
+  --ink: #0e0e0e;
+  --muted: #555;
+  --white: #f5f5f5;
+  --green: #22c55e;
+}
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Noto Sans JP', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* scanlines */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px);
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* bg grid */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:linear-gradient(#1a1a1a 1px,transparent 1px),linear-gradient(90deg,#1a1a1a 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:.35;
+  pointer-events:none;
+  z-index:0;
+}
+
+.app { position:relative; z-index:1; }
+
+/* ── SCREENS ── */
+.screen { display:none; min-height:100vh; }
+.screen.active { display:flex; flex-direction:column; align-items:center; }
+
+/* ── SHARED COMPONENTS ── */
+.top-bar {
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 20px;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,8,8,.9);
+  backdrop-filter:blur(10px);
+  position:sticky;
+  top:0;
+  z-index:50;
+}
+
+.logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px;
+  letter-spacing:.12em;
+  color:var(--white);
+}
+
+.logo span { color:var(--red); }
+
+.room-pill {
+  font-family:'Courier Prime',monospace;
+  font-size:12px;
+  color:var(--yellow);
+  border:1px solid var(--yellow);
+  padding:4px 12px;
+  letter-spacing:.15em;
+}
+
+/* ── HOME ── */
+#s-home {
+  justify-content:center;
+  padding:40px 24px;
+  text-align:center;
+}
+
+.hero-title {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(72px,18vw,140px);
+  line-height:.85;
+  letter-spacing:.06em;
+  text-shadow:6px 6px 0 var(--red);
+  animation:drop .5s cubic-bezier(.16,1,.3,1) both;
+}
+
+.hero-sub {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(16px,4vw,28px);
+  letter-spacing:.25em;
+  color:var(--yellow);
+  margin:8px 0 40px;
+}
+
+.home-cards {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  width:100%;
+  max-width:440px;
+  margin-bottom:24px;
+}
+
+.home-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:22px 16px;
+  cursor:pointer;
+  transition:all .15s;
+  text-align:left;
+  position:relative;
+  overflow:hidden;
+}
+
+.home-card::before {
+  content:'';
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:3px;
+  background:var(--red);
+  transform:scaleX(0);
+  transition:transform .2s;
+  transform-origin:left;
+}
+
+.home-card:hover::before { transform:scaleX(1); }
+.home-card:hover { border-color:#333; transform:translateY(-2px); }
+
+.hc-icon { font-size:28px; margin-bottom:10px; }
+.hc-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:.08em; }
+.hc-desc { font-size:11px; color:var(--muted); margin-top:4px; font-family:'Courier Prime',monospace; }
+
+/* ── LOBBY ── */
+#s-lobby { padding:0; }
+.lobby-body { width:100%; max-width:500px; padding:28px 20px; }
+
+.section-label {
+  font-family:'Courier Prime',monospace;
+  font-size:10px;
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  color:var(--red);
+  margin-bottom:8px;
+}
+
+.big-heading {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:38px;
+  letter-spacing:.08em;
+  margin-bottom:20px;
+}
+
+/* form */
+.fgroup { margin-bottom:18px; }
+label {
+  display:block;
+  font-family:'Courier Prime',monospace;
+  font-size:10px;
+  letter-spacing:.2em;
+  color:var(--yellow);
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+
+input[type=text], select {
+  width:100%;
+  background:#0e0e0e;
+  border:none;
+  border-bottom:2px solid var(--border);
+  color:var(--white);
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:15px;
+  padding:10px 12px;
+  outline:none;
+  transition:border-color .2s;
+}
+input[type=text]:focus, select:focus { border-bottom-color:var(--yellow); }
+select option { background:#111; }
+
+/* genre chips */
+.genre-row { display:flex; flex-wrap:wrap; gap:6px; }
+.genre-chip {
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-family:'Courier Prime',monospace;
+  font-size:11px;
+  padding:5px 12px;
+  cursor:pointer;
+  transition:all .15s;
+  letter-spacing:.06em;
+}
+.genre-chip:hover, .genre-chip.on { border-color:var(--yellow); color:var(--yellow); background:rgba(255,208,0,.05); }
+
+/* players waiting list */
+.player-row-online {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  margin-bottom:8px;
+  animation:fadeUp .3s ease both;
+}
+.player-row-online .dot {
+  width:8px; height:8px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+}
+.player-row-online .pname { font-size:14px; font-weight:700; }
+.player-row-online .ptag { font-family:'Courier Prime',monospace; font-size:10px; color:var(--muted); }
+
+.room-code-box {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-left:4px solid var(--yellow);
+  padding:16px;
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.room-code-val {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:36px;
+  letter-spacing:.2em;
+  color:var(--yellow);
+}
+
+/* ── CARD REVEAL (per-device) ── */
+#s-reveal { justify-content:center; padding:40px 20px; text-align:center; }
+
+.reveal-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:52px;
+  letter-spacing:.1em;
+  margin-bottom:4px;
+}
+
+.reveal-inst {
+  font-family:'Courier Prime',monospace;
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:.1em;
+  margin-bottom:28px;
+}
+
+/* THE CARD */
+.card-scene { perspective:1400px; width:280px; margin:0 auto 24px; cursor:pointer; }
+
+.card-3d {
+  width:280px; height:400px;
+  transform-style:preserve-3d;
+  transition:transform .65s cubic-bezier(.4,0,.2,1);
+  position:relative;
+}
+
+.card-3d.flipped { transform:rotateY(180deg); }
+
+.card-face {
+  position:absolute; inset:0;
+  backface-visibility:hidden;
+  border-radius:6px;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:24px;
+}
+
+/* BACK — neutral, NO color leaking */
+.c-back {
+  background:var(--paper);
+  border:3px solid var(--ink);
+  overflow:hidden;
+}
+
+.c-back::before {
+  content:'UC';
+  position:absolute;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:120px;
+  color:rgba(0,0,0,.05);
+  pointer-events:none;
+}
+
+.back-logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:68px;
+  color:var(--ink);
+  line-height:1;
+  text-shadow:3px 3px 0 #c00;
+  position:relative;
+  z-index:1;
+}
+
+.back-tap {
+  font-family:'Courier Prime',monospace;
+  font-size:11px;
+  letter-spacing:.2em;
+  color:#888;
+  margin-top:8px;
+  position:relative;
+  z-index:1;
+  animation:blink 2s infinite;
+}
+
+/* FRONT — same neutral base, role revealed only by text/tag */
+.c-front {
+  transform:rotateY(180deg);
+  background:var(--paper);
+  border:3px solid var(--ink);
+  color:var(--ink);
+  gap:10px;
+  overflow:hidden;
+}
+
+/* character image */
+.char-img {
+  width:120px; height:120px;
+  border-radius:50%;
+  object-fit:cover;
+  border:3px solid var(--ink);
+  background:#ddd;
+  flex-shrink:0;
+}
+
+.char-img-placeholder {
+  width:120px; height:120px;
+  border-radius:50%;
+  background:#e0d9cc;
+  border:3px solid var(--ink);
+  display:flex; align-items:center; justify-content:center;
+  font-size:40px;
+  flex-shrink:0;
+}
+
+.role-tag {
+  font-family:'Courier Prime',monospace;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  padding:3px 10px;
+  border:1px solid var(--ink);
+  color:var(--ink);
+}
+
+.char-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:38px;
+  line-height:1;
+  text-align:center;
+  color:var(--ink);
+  letter-spacing:.04em;
+}
+
+.char-name.unknown {
+  font-style:italic;
+  font-size:28px;
+  color:#777;
+}
+
+.char-hint {
+  font-family:'Courier Prime',monospace;
+  font-size:11px;
+  color:#666;
+  text-align:center;
+  line-height:1.5;
+}
+
+/* bottom stripe — ONLY shown after flip, very subtle */
+.card-stripe {
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:6px;
+  opacity:0;
+  transition:opacity .3s .5s;
+}
+.card-3d.flipped .card-stripe { opacity:1; }
+/* still neutral colors — no red for undercover, green for civil etc. */
+.card-stripe { background:var(--ink); }
+
+/* ── WAITING ROOM (after reveal) ── */
+#s-waiting { justify-content:center; padding:40px 20px; text-align:center; }
+
+.wait-icon { font-size:64px; margin-bottom:16px; animation:pulse 2s infinite; }
+.wait-title { font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:.1em; }
+.wait-sub { font-family:'Courier Prime',monospace; font-size:13px; color:var(--muted); margin-top:6px; }
+
+.players-ready-list { margin-top:24px; width:100%; max-width:360px; }
+.ready-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  margin-bottom:6px;
+}
+.ready-dot { width:8px; height:8px; border-radius:50%; background:var(--border); }
+.ready-dot.ok { background:var(--green); box-shadow:0 0 6px var(--green); }
+
+/* ── GAME ── */
+#s-game { padding:0; }
+.game-body { width:100%; max-width:560px; padding:20px; }
+
+.round-banner {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;
+  letter-spacing:.15em;
+  color:var(--yellow);
+  margin-bottom:16px;
+}
+
+.players-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:8px;
+  margin-bottom:20px;
+}
+
+.pg-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:12px;
+  display:flex; align-items:center; gap:10px;
+}
+
+.pg-card.dead { opacity:.28; filter:grayscale(1); }
+.pg-card .av { font-size:20px; }
+.pg-card .pn { font-size:13px; font-weight:700; }
+.pg-card .ps { font-family:'Courier Prime',monospace; font-size:10px; color:var(--muted); }
+
+.vote-box {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:18px;
+  margin-bottom:16px;
+}
+
+.vote-heading {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:26px;
+  letter-spacing:.1em;
+  color:var(--red);
+  margin-bottom:12px;
+}
+
+/* host-only notice */
+.host-notice {
+  font-family:'Courier Prime',monospace;
+  font-size:12px;
+  color:var(--muted);
+  border:1px solid var(--border);
+  padding:10px 14px;
+  margin-bottom:12px;
+}
+
+.vote-btn {
+  width:100%;
+  background:#0e0e0e;
+  border:1px solid var(--border);
+  color:var(--white);
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:14px;
+  padding:12px 16px;
+  cursor:pointer;
+  text-align:left;
+  transition:all .15s;
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:6px;
+}
+.vote-btn:hover { border-color:var(--red); }
+.vote-btn.dead { opacity:.3; pointer-events:none; text-decoration:line-through; }
+
+/* ── RESULT ── */
+#s-result { justify-content:center; padding:40px 20px; text-align:center; }
+.result-big {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(60px,15vw,100px);
+  line-height:.88;
+  animation:drop .4s cubic-bezier(.16,1,.3,1) both;
+}
+.result-big.w { color:var(--yellow); text-shadow:4px 4px 0 #aa8c00; }
+.result-big.l { color:var(--red); text-shadow:4px 4px 0 var(--red-dark); }
+
+.result-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:20px;
+  margin:20px auto;
+  width:100%; max-width:380px;
+  text-align:left;
+}
+
+.rc-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:9px 0;
+  border-bottom:1px solid #181818;
+  font-size:13px;
+}
+.rc-row:last-child { border-bottom:none; }
+.rc-label { font-family:'Courier Prime',monospace; font-size:10px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; }
+.rc-val { font-weight:700; }
+.cv { color:var(--yellow); }
+.rv { color:var(--red); }
+.gv { color:var(--green); }
+
+/* ── BUTTONS ── */
+.btn {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:20px;
+  letter-spacing:.12em;
+  border:none;
+  cursor:pointer;
+  padding:12px 30px;
+  transition:all .15s;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.btn-r { background:var(--red); color:#fff; box-shadow:4px 4px 0 var(--red-dark); }
+.btn-r:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--red-dark); }
+.btn-y { background:var(--yellow); color:var(--ink); box-shadow:4px 4px 0 #aa8c00; }
+.btn-y:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 #aa8c00; }
+.btn-o { background:transparent; border:1px solid var(--border); color:var(--white); font-size:15px; padding:10px 20px; }
+.btn-o:hover { border-color:#555; }
+.btn:disabled { opacity:.4; pointer-events:none; }
+
+.btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:20px; left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--yellow); color:var(--ink);
+  font-family:'Bebas Neue',sans-serif;
+  font-size:16px; letter-spacing:.1em;
+  padding:10px 24px;
+  z-index:999;
+  transition:transform .3s cubic-bezier(.16,1,.3,1);
+  pointer-events:none;
+  white-space:nowrap;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* ── LOADING overlay ── */
+.loading-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.88);
+  z-index:500;
+  align-items:center; justify-content:center; flex-direction:column; gap:16px;
+}
+.loading-overlay.show { display:flex; }
+.lo-text { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:.2em; color:var(--red); }
+.lo-bar { width:180px; height:2px; background:#222; overflow:hidden; }
+.lo-fill { height:100%; background:var(--red); animation:slide 1s infinite ease-in-out; }
+
+/* ── ANIMATIONS ── */
+@keyframes drop { from{opacity:0;transform:translateY(24px) scale(.97)} to{opacity:1;transform:none} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+
+@media(max-width:420px) {
+  .home-cards { grid-template-columns:1fr; }
+  .players-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="loading">
+  <div class="lo-text" id="loading-text">CHARGEMENT…</div>
+  <div class="lo-bar"><div class="lo-fill"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="app">
+
+<!-- ══════════ HOME ══════════ -->
+<div id="s-home" class="screen active">
+  <div style="padding:40px 24px; text-align:center; max-width:480px; width:100%;">
+    <div style="font-family:'Courier Prime',monospace; font-size:11px; letter-spacing:.3em; color:var(--red); margin-bottom:20px; animation:blink 2s infinite;">● ONLINE MULTIPLAYER</div>
+    <div class="hero-title">UNDER<br>COVER</div>
+    <div class="hero-sub">— Animé Edition —</div>
+    <p style="font-size:13px; color:#666; max-width:340px; margin:0 auto 36px; line-height:1.7; font-family:'Courier Prime',monospace;">
+      Chaque joueur sur son propre appareil. Un imposteur reçoit un perso similaire. Mr. White ne sait rien. Qui va se trahir ?
+    </p>
+    <div class="home-cards">
+      <div class="home-card" onclick="showScreen('s-create')">
+        <div class="hc-icon">🎮</div>
+        <div class="hc-title">Créer</div>
+        <div class="hc-desc">Nouvelle partie</div>
+      </div>
+      <div class="home-card" onclick="showScreen('s-join')">
+        <div class="hc-icon">🔗</div>
+        <div class="hc-title">Rejoindre</div>
+        <div class="hc-desc">Code de salle</div>
+      </div>
+    </div>
+    <button class="btn btn-o" onclick="showRules()">📜 Règles du jeu</button>
+  </div>
+</div>
+
+<!-- ══════════ CREATE ══════════ -->
+<div id="s-create" class="screen">
+  <div class="top-bar">
+    <div class="logo">UNDER<span>COVER</span></div>
+    <button class="btn btn-o" style="font-size:13px;padding:6px 14px;" onclick="showScreen('s-home')">← Retour</button>
+  </div>
+  <div class="lobby-body">
+    <div class="section-label">Hôte de la partie</div>
+    <div class="big-heading">CRÉER UNE SALLE</div>
+
+    <div class="fgroup">
+      <label>Ton prénom</label>
+      <input type="text" id="create-name" placeholder="Ton prénom..." maxlength="20" />
+    </div>
+
+    <div class="fgroup">
+      <label>Genre d'animé</label>
+      <div class="genre-row" id="genre-row">
+        <button class="genre-chip on" data-genre="shonen">Shōnen</button>
+        <button class="genre-chip" data-genre="fantasy">Fantasy</button>
+        <button class="genre-chip" data-genre="action">Action</button>
+        <button class="genre-chip" data-genre="romance">Romance</button>
+        <button class="genre-chip" data-genre="sports">Sports</button>
+        <button class="genre-chip" data-genre="mix">Mix total</button>
+      </div>
+    </div>
+
+    <div class="fgroup">
+      <label>Mr. White</label>
+      <select id="mrw-toggle">
+        <option value="yes">Activé (recommandé 5+ joueurs)</option>
+        <option value="no">Désactivé</option>
+      </select>
+    </div>
+
+    <button class="btn btn-r" style="width:100%; justify-content:center;" onclick="createRoom()">CRÉER LA SALLE →</button>
+  </div>
+</div>
+
+<!-- ══════════ JOIN ══════════ -->
+<div id="s-join" class="screen">
+  <div class="top-bar">
+    <div class="logo">UNDER<span>COVER</span></div>
+    <button class="btn btn-o" style="font-size:13px;padding:6px 14px;" onclick="showScreen('s-home')">← Retour</button>
+  </div>
+  <div class="lobby-body">
+    <div class="section-label">Rejoindre une partie</div>
+    <div class="big-heading">ENTRER LE CODE</div>
+
+    <div class="fgroup">
+      <label>Ton prénom</label>
+      <input type="text" id="join-name" placeholder="Ton prénom..." maxlength="20" />
+    </div>
+
+    <div class="fgroup">
+      <label>Code de la salle</label>
+      <input type="text" id="join-code" placeholder="Ex: AB12" maxlength="6"
+        style="font-size:28px; letter-spacing:.3em; text-transform:uppercase; font-family:'Bebas Neue',sans-serif;"
+        oninput="this.value=this.value.toUpperCase()" />
+    </div>
+
+    <button class="btn btn-r" style="width:100%; justify-content:center;" onclick="joinRoom()">REJOINDRE →</button>
+  </div>
+</div>
+
+<!-- ══════════ LOBBY (waiting room) ══════════ -->
+<div id="s-lobby" class="screen">
+  <div class="top-bar">
+    <div class="logo">UNDER<span>COVER</span></div>
+    <div class="room-pill" id="lobby-code-display">----</div>
+  </div>
+  <div class="lobby-body">
+    <div class="section-label">Salle d'attente</div>
+    <div class="big-heading" id="lobby-title">EN ATTENTE…</div>
+
+    <div class="room-code-box">
+      <div>
+        <div style="font-family:'Courier Prime',monospace; font-size:10px; letter-spacing:.2em; color:var(--muted); margin-bottom:4px;">CODE DE LA SALLE</div>
+        <div class="room-code-val" id="lobby-big-code">----</div>
+      </div>
+      <button class="btn btn-o" style="font-size:13px; padding:8px 16px;" onclick="copyCode()">COPIER</button>
+    </div>
+
+    <div class="section-label" style="margin-bottom:10px;">Joueurs connectés</div>
+    <div id="lobby-players-list"></div>
+
+    <div id="lobby-host-controls" style="display:none; margin-top:20px;">
+      <p style="font-family:'Courier Prime',monospace; font-size:12px; color:var(--muted); margin-bottom:14px;">Minimum 3 joueurs requis.</p>
+      <button class="btn btn-y" style="width:100%; justify-content:center;" id="start-btn" onclick="hostStartGame()" disabled>LANCER LA PARTIE →</button>
+    </div>
+
+    <div id="lobby-guest-wait" style="display:none; margin-top:20px; font-family:'Courier Prime',monospace; font-size:13px; color:var(--muted); text-align:center;">
+      En attente que l'hôte lance la partie…
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CARD REVEAL (per device) ══════════ -->
+<div id="s-reveal" class="screen">
+  <div class="reveal-name" id="rv-name">JOUEUR</div>
+  <div class="reveal-inst">— retourne ta carte —</div>
+
+  <div class="card-scene" onclick="flipCard()">
+    <div class="card-3d" id="the-card">
+      <!-- BACK: neutral -->
+      <div class="card-face c-back">
+        <div class="back-logo">UC</div>
+        <div class="back-tap">APPUIE POUR VOIR</div>
+      </div>
+      <!-- FRONT: populated by JS -->
+      <div class="card-face c-front" id="card-front"></div>
+    </div>
+  </div>
+
+  <div id="rv-next" style="display:none; margin-top:20px;">
+    <button class="btn btn-r" onclick="doneReading()">J'AI LU → CACHER</button>
+  </div>
+
+  <div id="rv-tap-hint" style="font-family:'Courier Prime',monospace; font-size:12px; color:#555; animation:blink 2s infinite; margin-top:8px;">
+    [ APPUIE SUR LA CARTE ]
+  </div>
+</div>
+
+<!-- ══════════ WAITING (ready check) ══════════ -->
+<div id="s-waiting" class="screen">
+  <div class="wait-icon">⏳</div>
+  <div class="wait-title">EN ATTENTE</div>
+  <div class="wait-sub">Tous les joueurs doivent lire leur carte</div>
+  <div class="players-ready-list" id="ready-list"></div>
+</div>
+
+<!-- ══════════ GAME ══════════ -->
+<div id="s-game" class="screen">
+  <div class="top-bar">
+    <div class="logo">UNDER<span>COVER</span></div>
+    <div class="room-pill" id="game-code-display">----</div>
+  </div>
+  <div class="game-body">
+    <div class="round-banner">TOUR <span id="round-num">1</span> — <span id="alive-count">?</span> joueurs en vie</div>
+
+    <div class="players-grid" id="pg"></div>
+
+    <div class="vote-box" id="vote-box">
+      <div class="vote-heading">⚡ VOTE</div>
+      <div class="host-notice" id="host-vote-notice"></div>
+      <div id="vote-btns"></div>
+    </div>
+
+    <div id="mrw-guess-box" style="display:none; background:var(--surface); border:1px solid var(--border); padding:18px; margin-top:12px;">
+      <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:.1em; color:var(--yellow); margin-bottom:10px;">🎯 MR. WHITE — DEVINE LE MOT</div>
+      <p style="font-family:'Courier Prime',monospace; font-size:12px; color:var(--muted); margin-bottom:12px;">L'Undercover a été éliminé. Mr. White, devine le personnage civil !</p>
+      <input type="text" id="mrw-input" placeholder="Ton guess…" style="margin-bottom:10px;" />
+      <button class="btn btn-y" onclick="submitMrWhiteGuess()">VALIDER MON GUESS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ RESULT ══════════ -->
+<div id="s-result" class="screen">
+  <div style="padding:40px 20px; text-align:center; width:100%; max-width:420px;">
+    <div class="result-big" id="res-title">VICTOIRE</div>
+    <div style="width:40px; height:3px; background:var(--red); margin:14px auto;"></div>
+    <p id="res-sub" style="font-family:'Courier Prime',monospace; font-size:13px; color:#888; margin-bottom:6px;"></p>
+    <div class="result-card" id="res-details"></div>
+    <div class="btn-row" style="justify-content:center; margin-top:20px;">
+      <button class="btn btn-r" onclick="showScreen('s-home')">MENU PRINCIPAL</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ══════════════════════════════════════════
+//  WAIT FOR FIREBASE
+// ══════════════════════════════════════════
+let FB;
+const fbPromise = new Promise(res => {
+  if (window._fbReady) { FB = window._fb; res(); }
+  else window.addEventListener('fb-ready', () => { FB = window._fb; res(); });
+});
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let STATE = {
+  roomCode: null,
+  myName: null,
+  isHost: false,
+  myRole: null,       // 'civilian' | 'undercover' | 'mr-white'
+  myWord: null,
+  myImage: null,
+  genre: 'shonen',
+  wordPair: null,
+  players: {},        // { name: { ready, eliminated, role, word } }
+  eliminated: {},
+  round: 1,
+  gamePhase: null,    // 'lobby' | 'reveal' | 'game' | 'result'
+};
+
+let unsubRoom = null;
+
+// ══════════════════════════════════════════
+//  GENRE PROMPTS
+// ══════════════════════════════════════════
+const GENRE_PROMPTS = {
+  shonen: 'shōnen (Naruto, One Piece, Dragon Ball, Demon Slayer, My Hero Academia, Bleach, Fairy Tail)',
+  fantasy: 'fantasy/isekai (SAO, Re:Zero, Overlord, Mushoku Tensei, That Time I Got Reincarnated)',
+  action: 'action (Attack on Titan, Jujutsu Kaisen, Hunter x Hunter, Chainsaw Man)',
+  romance: 'romance/slice of life (Toradora, Your Lie in April, Clannad, Fruits Basket)',
+  sports: 'sports (Haikyuu, Kuroko Basketball, Slam Dunk, Blue Lock)',
+  mix: 'tous genres confondus (shōnen, seinen, isekai, romance, sports…)',
+};
+
+const EMOJIS = ['🐉','⚔️','🌊','🔥','⚡','🌙','🎯','🗡️','🛡️','✨','👁️','🐺','🌸','💫','🦊'];
+
+// ══════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function setLoading(on, text='CHARGEMENT…') {
+  document.getElementById('loading').classList.toggle('show', on);
+  document.getElementById('loading-text').textContent = text;
+}
+
+function toast(msg, dur=3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ══════════════════════════════════════════
+//  GENRE CHIPS
+// ══════════════════════════════════════════
+document.getElementById('genre-row').addEventListener('click', e => {
+  const chip = e.target.closest('.genre-chip');
+  if (!chip) return;
+  document.querySelectorAll('.genre-chip').forEach(c => c.classList.remove('on'));
+  chip.classList.add('on');
+  STATE.genre = chip.dataset.genre;
+});
+
+// ══════════════════════════════════════════
+//  ROOM CODE GEN
+// ══════════════════════════════════════════
+function genCode() {
+  return Array.from({length:4}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+}
+
+// ══════════════════════════════════════════
+//  CREATE ROOM
+// ══════════════════════════════════════════
+async function createRoom() {
+  const name = document.getElementById('create-name').value.trim();
+  if (!name) { toast('Entre ton prénom !'); return; }
+
+  await fbPromise;
+  setLoading(true, 'CRÉATION DE LA SALLE…');
+
+  const code = genCode();
+  const genre = STATE.genre;
+  const mrw = document.getElementById('mrw-toggle').value === 'yes';
+
+  const roomData = {
+    code, genre, mrWhite: mrw,
+    host: name,
+    phase: 'lobby',
+    players: { [name]: { ready: false, eliminated: false } },
+    round: 1,
+  };
+
+  await FB.set(FB.ref(FB.db, `rooms/${code}`), roomData);
+
+  STATE.roomCode = code;
+  STATE.myName = name;
+  STATE.isHost = true;
+  STATE.genre = genre;
+
+  setLoading(false);
+  enterLobby(code);
+}
+
+// ══════════════════════════════════════════
+//  JOIN ROOM
+// ══════════════════════════════════════════
+async function joinRoom() {
+  const name = document.getElementById('join-name').value.trim();
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!name) { toast('Entre ton prénom !'); return; }
+  if (code.length < 4) { toast('Code invalide !'); return; }
+
+  await fbPromise;
+  setLoading(true, 'CONNEXION…');
+
+  const snap = await FB.get(FB.ref(FB.db, `rooms/${code}`));
+  if (!snap.exists()) { toast('Salle introuvable !'); setLoading(false); return; }
+
+  const room = snap.val();
+  if (room.phase !== 'lobby') { toast('Partie déjà en cours !'); setLoading(false); return; }
+
+  // Check name conflict
+  if (room.players && room.players[name]) { toast('Ce prénom est déjà pris !'); setLoading(false); return; }
+
+  await FB.update(FB.ref(FB.db, `rooms/${code}/players`), { [name]: { ready: false, eliminated: false } });
+
+  STATE.roomCode = code;
+  STATE.myName = name;
+  STATE.isHost = false;
+  STATE.genre = room.genre;
+
+  setLoading(false);
+  enterLobby(code);
+}
+
+// ══════════════════════════════════════════
+//  LOBBY
+// ══════════════════════════════════════════
+function enterLobby(code) {
+  document.getElementById('lobby-code-display').textContent = code;
+  document.getElementById('lobby-big-code').textContent = code;
+  document.getElementById('lobby-title').textContent = STATE.isHost ? 'TA SALLE' : 'CONNECTÉ !';
+
+  document.getElementById('lobby-host-controls').style.display = STATE.isHost ? 'block' : 'none';
+  document.getElementById('lobby-guest-wait').style.display = STATE.isHost ? 'none' : 'block';
+
+  showScreen('s-lobby');
+  subscribeRoom(code);
+}
+
+function subscribeRoom(code) {
+  if (unsubRoom) unsubRoom();
+  const roomRef = FB.ref(FB.db, `rooms/${code}`);
+  unsubRoom = FB.onValue(roomRef, snap => {
+    if (!snap.exists()) return;
+    const room = snap.val();
+    handleRoomUpdate(room);
+  });
+}
+
+function handleRoomUpdate(room) {
+  const players = room.players || {};
+  const names = Object.keys(players);
+  STATE.players = players;
+  STATE.eliminated = {};
+  names.forEach(n => { if (players[n].eliminated) STATE.eliminated[n] = true; });
+
+  if (room.phase === 'lobby') {
+    renderLobbyPlayers(names);
+    if (STATE.isHost) {
+      const startBtn = document.getElementById('start-btn');
+      startBtn.disabled = names.length < 3;
+    }
+  }
+
+  if (room.phase === 'reveal' && STATE.gamePhase !== 'reveal') {
+    STATE.gamePhase = 'reveal';
+    STATE.wordPair = room.wordPair;
+    const myData = room.assignments && room.assignments[STATE.myName];
+    if (myData) {
+      STATE.myRole = myData.role;
+      STATE.myWord = myData.word;
+      STATE.myImage = myData.image || null;
+    }
+    showReveal();
+  }
+
+  if (room.phase === 'game') {
+    STATE.gamePhase = 'game';
+    STATE.round = room.round || 1;
+    renderGameScreen(room);
+    // check if current screen is waiting → go to game
+    if (document.getElementById('s-waiting').classList.contains('active') ||
+        document.getElementById('s-reveal').classList.contains('active')) {
+      showScreen('s-game');
+      document.getElementById('game-code-display').textContent = STATE.roomCode;
+    }
+  }
+
+  if (room.phase === 'reveal' && STATE.gamePhase === 'reveal') {
+    // update ready list if on waiting screen
+    renderReadyList(room.players);
+  }
+
+  if (room.phase === 'result') {
+    STATE.gamePhase = 'result';
+    showResultScreen(room.result, room.wordPair, room.assignments);
+  }
+}
+
+function renderLobbyPlayers(names) {
+  const list = document.getElementById('lobby-players-list');
+  list.innerHTML = names.map((n,i) => `
+    <div class="player-row-online">
+      <div class="dot"></div>
+      <div>
+        <div class="pname">${n}</div>
+        <div class="ptag">${i===0 ? '— Hôte' : '— Joueur'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(STATE.roomCode).then(() => toast('Code copié ! ' + STATE.roomCode));
+}
+
+// ══════════════════════════════════════════
+//  HOST STARTS GAME
+// ══════════════════════════════════════════
+async function hostStartGame() {
+  setLoading(true, 'GÉNÉRATION IA…');
+  const snap = await FB.get(FB.ref(FB.db, `rooms/${STATE.roomCode}`));
+  const room = snap.val();
+  const players = Object.keys(room.players);
+  const genre = room.genre;
+  const mrwEnabled = room.mrWhite && players.length >= 5;
+
+  try {
+    // 1. Generate word pair
+    const pair = await generateWordPair(genre);
+    // 2. Fetch images
+    const [img1, img2] = await Promise.all([
+      fetchCharImage(pair.civilian, pair.anime1),
+      fetchCharImage(pair.undercover, pair.anime2),
+    ]);
+    pair.civilianImg = img1;
+    pair.undercoverImg = img2;
+
+    // 3. Assign roles
+    const shuffled = [...players].sort(() => Math.random() - .5);
+    const assignments = {};
+    const undercoverName = shuffled[0];
+    const mrWhiteName = mrwEnabled ? shuffled[1] : null;
+
+    shuffled.forEach(p => {
+      if (p === undercoverName) assignments[p] = { role:'undercover', word:pair.undercover, image: pair.undercoverImg };
+      else if (p === mrWhiteName) assignments[p] = { role:'mr-white', word:null, image:null };
+      else assignments[p] = { role:'civilian', word:pair.civilian, image: pair.civilianImg };
+    });
+
+    // 4. Push to Firebase
+    await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), {
+      phase: 'reveal',
+      wordPair: pair,
+      assignments,
+      round: 1,
+    });
+
+    setLoading(false);
+  } catch(e) {
+    setLoading(false);
+    toast('Erreur IA : ' + e.message);
+    console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════
+//  CARD REVEAL
+// ══════════════════════════════════════════
+let cardFlipped = false;
+
+function showReveal() {
+  cardFlipped = false;
+  document.getElementById('the-card').classList.remove('flipped');
+  document.getElementById('rv-next').style.display = 'none';
+  document.getElementById('rv-tap-hint').style.display = 'block';
+  document.getElementById('rv-name').textContent = STATE.myName.toUpperCase();
+
+  // Build front content — IDENTICAL visually for all roles except the text
+  const front = document.getElementById('card-front');
+
+  // Role labels — no color clue
+  const roleLabels = { civilian:'Civil', undercover:'Civil', 'mr-white':'Mr. White' };
+  // We show "Civil" for both civilian AND undercover to avoid color leaking
+  // The word itself is the only difference
+  const displayRole = roleLabels[STATE.myRole] || 'Civil';
+
+  let imgHTML = '';
+  if (STATE.myImage) {
+    imgHTML = `<img class="char-img" src="${STATE.myImage}" alt="${STATE.myWord || ''}" onerror="this.outerHTML='<div class=char-img-placeholder>🎭</div>'" />`;
+  } else if (STATE.myRole === 'mr-white') {
+    imgHTML = `<div class="char-img-placeholder">❓</div>`;
+  } else {
+    imgHTML = `<div class="char-img-placeholder">🎭</div>`;
+  }
+
+  let wordHTML = '';
+  if (STATE.myRole === 'mr-white') {
+    wordHTML = `<div class="char-name unknown">Rôle caché</div>
+                <div class="char-hint">Tu ne connais pas le perso.<br>Bluff pour survivre !</div>`;
+  } else {
+    wordHTML = `<div class="char-name">${STATE.myWord}</div>
+                <div class="char-hint">Décris ce perso sans le nommer !</div>`;
+  }
+
+  // ONE neutral role tag for everyone (no red/green distinction!)
+  front.innerHTML = `
+    <span class="role-tag">${displayRole}</span>
+    ${imgHTML}
+    ${wordHTML}
+    <div class="card-stripe"></div>
+  `;
+
+  showScreen('s-reveal');
+}
+
+function flipCard() {
+  if (cardFlipped) return;
+  cardFlipped = true;
+  document.getElementById('the-card').classList.add('flipped');
+  document.getElementById('rv-tap-hint').style.display = 'none';
+  document.getElementById('rv-next').style.display = 'block';
+}
+
+async function doneReading() {
+  // Hide card immediately
+  document.getElementById('the-card').classList.remove('flipped');
+  // Mark ready in Firebase
+  await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}/players/${STATE.myName}`), { ready: true });
+  // Go to waiting screen
+  showScreen('s-waiting');
+  document.getElementById('rv-name').textContent = '';
+
+  // Check if all ready → host switches phase to 'game'
+  const snap = await FB.get(FB.ref(FB.db, `rooms/${STATE.roomCode}`));
+  const room = snap.val();
+  renderReadyList(room.players);
+
+  if (STATE.isHost) {
+    const allReady = Object.values(room.players).every(p => p.ready);
+    if (allReady) {
+      await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), { phase:'game' });
+    }
+  }
+}
+
+function renderReadyList(players) {
+  const list = document.getElementById('ready-list');
+  if (!list) return;
+  list.innerHTML = Object.entries(players).map(([n, p]) => `
+    <div class="ready-row">
+      <div class="ready-dot ${p.ready ? 'ok' : ''}"></div>
+      <span style="font-size:14px; font-weight:700;">${n}</span>
+      <span style="font-family:'Courier Prime',monospace; font-size:11px; color:var(--muted); margin-left:auto;">${p.ready ? 'Prêt ✓' : 'En attente…'}</span>
+    </div>
+  `).join('');
+
+  // Check all ready
+  if (STATE.isHost && Object.values(players).every(p => p.ready)) {
+    FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), { phase:'game' });
+  }
+}
+
+// ══════════════════════════════════════════
+//  GAME SCREEN
+// ══════════════════════════════════════════
+function renderGameScreen(room) {
+  const players = room.players || {};
+  const names = Object.keys(players);
+  const alive = names.filter(n => !players[n].eliminated);
+
+  document.getElementById('round-num').textContent = room.round || 1;
+  document.getElementById('alive-count').textContent = alive.length;
+
+  // Players grid
+  const pg = document.getElementById('pg');
+  pg.innerHTML = names.map((n,i) => `
+    <div class="pg-card ${players[n].eliminated ? 'dead' : ''}">
+      <div class="av">${EMOJIS[i % EMOJIS.length]}</div>
+      <div>
+        <div class="pn">${n}</div>
+        <div class="ps">${players[n].eliminated ? 'éliminé' : 'en jeu'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Vote section — only host can vote
+  const notice = document.getElementById('host-vote-notice');
+  const voteDiv = document.getElementById('vote-btns');
+
+  if (STATE.isHost) {
+    notice.textContent = 'En tant qu\'hôte, tu appliques le vote de groupe.';
+    voteDiv.innerHTML = alive.map((n,i) => `
+      <button class="vote-btn" onclick="hostEliminate('${n}')">
+        <span>${EMOJIS[names.indexOf(n) % EMOJIS.length]}</span>
+        <span>${n}</span>
+      </button>
+    `).join('');
+  } else {
+    notice.textContent = 'L\'hôte applique le vote — discutez entre vous !';
+    voteDiv.innerHTML = alive.map((n,i) => `
+      <div class="vote-btn" style="cursor:default; opacity:.6;">
+        <span>${EMOJIS[names.indexOf(n) % EMOJIS.length]}</span>
+        <span>${n}</span>
+      </div>
+    `).join('');
+  }
+
+  // Mr. White guess box
+  const mrwBox = document.getElementById('mrw-guess-box');
+  mrwBox.style.display = 'none';
+  if (room.mrWhiteGuessPhase && STATE.isHost) {
+    mrwBox.style.display = 'block';
+  }
+}
+
+async function hostEliminate(name) {
+  if (!STATE.isHost) return;
+  const snap = await FB.get(FB.ref(FB.db, `rooms/${STATE.roomCode}`));
+  const room = snap.val();
+  const players = room.players;
+  const assignments = room.assignments;
+
+  // Eliminate
+  await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}/players/${name}`), { eliminated: true });
+
+  const role = assignments[name]?.role;
+  const alive = Object.entries(players).filter(([n,p]) => !p.eliminated && n !== name);
+  const aliveRoles = alive.map(([n]) => assignments[n]?.role);
+
+  const undercoverAlive = aliveRoles.includes('undercover');
+  const mrWhiteAlive = aliveRoles.includes('mr-white');
+  const civilianCount = aliveRoles.filter(r => r === 'civilian').length;
+
+  if (role === 'undercover') {
+    if (mrWhiteAlive) {
+      // Mr. White guess phase
+      await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), { mrWhiteGuessPhase: true, round: room.round + 1 });
+      toast('Undercover éliminé ! Mr. White peut deviner…');
+    } else {
+      endGame('civilians-win', room);
+    }
+  } else if (role === 'mr-white') {
+    if (undercoverAlive) {
+      await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), { round: room.round + 1, mrWhiteGuessPhase: false });
+      toast(`${name} était Mr. White ! La partie continue.`);
+    } else {
+      endGame('civilians-win', room);
+    }
+  } else {
+    // Civilian eliminated
+    if (!undercoverAlive && !mrWhiteAlive) {
+      endGame('civilians-win', room);
+    } else if (civilianCount <= 1 && undercoverAlive) {
+      endGame('undercover-wins', room);
+    } else if (civilianCount <= 1 && mrWhiteAlive) {
+      endGame('mrwhite-wins', room);
+    } else {
+      await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), { round: room.round + 1, mrWhiteGuessPhase: false });
+      toast(`${name} était Civil. Continuez !`);
+    }
+  }
+}
+
+async function submitMrWhiteGuess() {
+  const guess = document.getElementById('mrw-input').value.trim().toLowerCase();
+  const snap = await FB.get(FB.ref(FB.db, `rooms/${STATE.roomCode}`));
+  const room = snap.val();
+  const correct = room.wordPair?.civilian?.toLowerCase();
+
+  if (guess === correct) {
+    endGame('mrwhite-wins', room);
+  } else {
+    endGame('civilians-win', room);
+  }
+}
+
+async function endGame(outcome, room) {
+  const result = { outcome };
+  await FB.update(FB.ref(FB.db, `rooms/${STATE.roomCode}`), { phase:'result', result });
+}
+
+// ══════════════════════════════════════════
+//  RESULT SCREEN
+// ══════════════════════════════════════════
+function showResultScreen(result, wordPair, assignments) {
+  showScreen('s-result');
+  const outcome = result?.outcome;
+  const titleEl = document.getElementById('res-title');
+  const subEl = document.getElementById('res-sub');
+
+  const titleMap = { 'civilians-win':'VICTOIRE', 'undercover-wins':'INFILTRÉ', 'mrwhite-wins':'MR. WHITE' };
+  const subMap = {
+    'civilians-win': 'Les civils ont démasqué l\'imposteur !',
+    'undercover-wins': 'L\'Undercover a survécu jusqu\'au bout…',
+    'mrwhite-wins': 'Mr. White a deviné le mot et s\'en sort !',
+  };
+  titleEl.textContent = titleMap[outcome] || 'FIN';
+  titleEl.className = 'result-big ' + (outcome === 'civilians-win' ? 'w' : 'l');
+  subEl.textContent = subMap[outcome] || '';
+
+  const undercoverName = assignments ? Object.entries(assignments).find(([,a]) => a.role==='undercover')?.[0] : '—';
+  const mrWhiteName = assignments ? Object.entries(assignments).find(([,a]) => a.role==='mr-white')?.[0] : null;
+
+  document.getElementById('res-details').innerHTML = `
+    <div class="rc-row"><span class="rc-label">Mot Civil</span><span class="rc-val cv">${wordPair?.civilian || '—'}</span></div>
+    <div class="rc-row"><span class="rc-label">Mot Undercover</span><span class="rc-val rv">${wordPair?.undercover || '—'}</span></div>
+    <div class="rc-row"><span class="rc-label">L'Undercover était</span><span class="rc-val rv">${undercoverName || '—'}</span></div>
+    ${mrWhiteName ? `<div class="rc-row"><span class="rc-label">Mr. White était</span><span class="rc-val" style="color:#aaa">${mrWhiteName}</span></div>` : ''}
+    <div class="rc-row"><span class="rc-label">Animés</span><span class="rc-val" style="color:#555; font-size:11px;">${wordPair?.anime1} vs ${wordPair?.anime2}</span></div>
+    ${wordPair?.hint ? `<div class="rc-row"><span class="rc-label">Pourquoi proches</span><span class="rc-val" style="color:#555; font-size:11px; text-align:right; max-width:55%;">${wordPair.hint}</span></div>` : ''}
+  `;
+}
+
+// ══════════════════════════════════════════
+//  AI — GENERATE WORD PAIR
+// ══════════════════════════════════════════
+async function generateWordPair(genre) {
+  const genreDesc = GENRE_PROMPTS[genre] || GENRE_PROMPTS.mix;
+  const system = `Tu es un expert en animés japonais. Génère une paire de personnages pour le jeu Undercover.
+Réponds UNIQUEMENT en JSON valide sans aucun texte autour :
+{
+  "civilian": "NomExact du perso civil",
+  "undercover": "NomExact du perso undercover",
+  "anime1": "Titre exact de l'animé 1",
+  "anime2": "Titre exact de l'animé 2",
+  "hint": "courte raison (max 10 mots) pourquoi ces persos se ressemblent"
+}
+Critères :
+- Genre : ${genreDesc}
+- Les deux persos doivent être similaires (archétype, personnalité, rôle) mais clairement distincts
+- Très connus des fans, facilement descriptibles sans nommer
+- Exemples parfaits : Naruto/Deku, Goku/Saitama, Levi/Zoro, Rem/Zero Two, Mikasa/Erza
+Utilise des noms EXACTS tels qu'ils apparaissent dans MyAnimeList.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:300,
+      system,
+      messages:[{role:'user', content:`Genre : ${genreDesc}`}]
+    })
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.content[0].text.replace(/```json|```/g,'').trim();
+  return JSON.parse(text);
+}
+
+// ══════════════════════════════════════════
+//  JIKAN — FETCH CHARACTER IMAGE
+// ══════════════════════════════════════════
+async function fetchCharImage(charName, animeName) {
+  try {
+    const query = encodeURIComponent(charName);
+    const resp = await fetch(`https://api.jikan.moe/v4/characters?q=${query}&limit=5`);
+    const data = await resp.json();
+    if (!data.data || data.data.length === 0) return null;
+
+    // Try to find the best match (prefer one whose anime matches)
+    let best = data.data[0];
+    for (const c of data.data) {
+      const animes = c.anime || [];
+      if (animes.some(a => a.anime?.title?.toLowerCase().includes(animeName.toLowerCase().split(' ')[0]))) {
+        best = c; break;
+      }
+    }
+
+    return best.images?.webp?.image_url || best.images?.jpg?.image_url || null;
+  } catch {
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════
+//  RULES
+// ══════════════════════════════════════════
+function showRules() {
+  alert(`📜 RÈGLES — UNDERCOVER ANIMÉ
+
+👥 RÔLES :
+• Civils → reçoivent le même personnage
+• Undercover → reçoit un perso similaire
+• Mr. White → ne reçoit rien (doit bluffer)
+
+🎮 DÉROULEMENT :
+1. L'hôte crée une salle, les autres rejoignent avec le code
+2. Chacun lit sa carte sur son propre appareil
+3. À tour de rôle, décrivez votre perso sans le nommer
+4. Votez pour éliminer le suspect
+5. L'hôte applique le vote dans l'app
+
+🏆 CONDITIONS DE VICTOIRE :
+• Civils : éliminez l'Undercover
+• Undercover : restez le dernier civil
+• Mr. White : survivez & devinez le mot civil quand l'Undercover est éliminé`);
+}
+</script>
+</body>
+</html>
