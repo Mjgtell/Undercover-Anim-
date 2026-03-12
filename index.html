@@ -212,6 +212,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .we-word{font-weight:700;font-size:14px}
 .we-pend{font-style:italic;color:var(--muted);font-size:12px;font-family:var(--fm);animation:blink 1.5s infinite}
 
+.wentry.active-turn{background:rgba(255,214,10,.04);border-bottom-color:rgba(255,214,10,.2)}
+.wentry.active-turn .we-auth{color:var(--gold)}
+
 /* HISTORY */
 .hist-section{margin-top:8px}
 .hist-title{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;padding:6px 0;border-top:1px solid var(--border)}
@@ -604,7 +607,7 @@ function vibeOk(){vibe(40);}
 function vibeError(){vibe([100,50,100]);}
 
 // ── STATE ──
-let socket, _lastRoom=null, _myVote=null, _isSpectator=false, _pendingSpec=null, timerInterval=null;
+let socket, _lastRoom=null, _myVote=null, _isSpectator=false, _pendingSpec=null, timerInterval=null, _currentTurnPlayer=null;
 let S={name:null,code:null,isHost:false,myAssignment:null,cardFlipped:false,genre:'shonen',subPhase:'words'};
 const EMOJIS=['🐉','⚔️','🌊','🔥','⚡','🌙','🎯','🗡️','🛡️','✨','👁️','🐺','🌸','💫','🦊','🗿','🌀','🦋','🔮','🎪'];
 
@@ -622,10 +625,18 @@ function initSocket(){
   socket.on('spectator:offer',({code,name})=>{_pendingSpec={code,name};setLoading(false);document.getElementById('spec-yes-btn').onclick=()=>joinAsSpectator();showScreen('s-specoffer');});
   socket.on('spectator:joined',({message})=>{toast(message,'ok');showScreen('s-spectator');document.getElementById('sp-codepill').textContent=S.code;});
   socket.on('your:assignment',a=>{S.myAssignment=a;buildCardFront(a);});
+  socket.on('turn:next',({player})=>{
+    _currentTurnPlayer = player;
+    const isMe = player === S.name;
+    if(isMe){
+      toast('🎯 C\'est ton tour !', 'ok');
+      soundOk(); vibe([60,30,60]);
+    } else {
+      toast(`⏳ Tour de ${player}…`);
+    }
+    if(_lastRoom) renderPlaying(_lastRoom);
+  });
   socket.on('words:all_submitted',({round})=>{
-    // If server transitions to next round automatically (round < 2), stay in words phase
-    // If server transitions to vote, switch phase
-    // We just wait for room:update which will carry subPhase
     clearClientTimer();
     toast(`Tour ${round} — mots soumis !`,'ok');soundOk();vibeOk();
   });
@@ -671,11 +682,16 @@ function handleRoomUpdate(room){
     if(cur==='s-waiting'||cur==='s-reveal'||cur==='s-countdown'){S.subPhase='words';_myVote=null;document.getElementById('sub-notice').classList.remove('show');document.getElementById('winput-row').style.display='flex';document.getElementById('word-input').value='';document.getElementById('tie-box').style.display='none';document.getElementById('mrw-box').classList.remove('show');showScreen('s-playing');document.getElementById('g-codepill').textContent=S.code;}
     // Detect round change while already playing (e.g. round 1→2 auto-advance)
     if(wasInPlay && _lastRoom && room.round !== _lastRoom.round){
-      _myVote=null;
+      _myVote=null; _currentTurnPlayer=null;
       document.getElementById('sub-notice').classList.remove('show');
       document.getElementById('winput-row').style.display='flex';
       document.getElementById('word-input').value='';
       document.getElementById('tie-box').style.display='none';
+    }
+    // Sync turn player from room state (for reconnects)
+    if(room.turnOrder && room.currentTurnIndex !== undefined){
+      const alive = room.turnOrder.filter(n => room.players[n] && !room.players[n].eliminated && room.players[n].connected);
+      _currentTurnPlayer = alive[room.currentTurnIndex % Math.max(alive.length,1)] || null;
     }
     if(room.subPhase)S.subPhase=room.subPhase;
     renderPlaying(room);
@@ -828,12 +844,31 @@ function renderPlaying(room){
   // ── WORDS PHASE ──
   if(S.subPhase==='words'){
     document.getElementById('words-box').style.display='block';document.getElementById('vote-box').style.display='none';
-    const mine=wordsNow[S.name];
-    document.getElementById('winput-row').style.display=mine?'none':'flex';
-    document.getElementById('sub-notice').classList.toggle('show',!!mine);
-    document.getElementById('words-list').innerHTML=aliveActive.map(n=>{const w=wordsNow[n];return `<div class="wentry"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</span>${w?`<span class="we-word">${w}</span>`:`<span class="we-pend">écrit…</span>`}</div>`;}).join('');
+
+    const mine = wordsNow[S.name];
+    const isMyTurn = _currentTurnPlayer === S.name;
+    const iEliminated = players[S.name]?.eliminated;
+
+    // Input: only show if it's my turn AND I haven't submitted yet
+    document.getElementById('winput-row').style.display = (!mine && isMyTurn && !iEliminated) ? 'flex' : 'none';
+    document.getElementById('sub-notice').classList.toggle('show', !!mine && !isMyTurn);
+
+    // "Your turn" or "waiting" message
+    let statusHtml = '';
+    if(!mine && !iEliminated){
+      if(isMyTurn){
+        statusHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--gold);letter-spacing:.1em;animation:blink 1s infinite">🎯 C'EST TON TOUR — écris ton mot !</div>`;
+      } else if(_currentTurnPlayer){
+        statusHtml = `<div style="padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:.08em">⏳ Tour de <b style="color:var(--text)">${_currentTurnPlayer}</b>…</div>`;
+      }
+    } else if(mine) {
+      statusHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--green);letter-spacing:.1em">✓ Mot envoyé${_currentTurnPlayer && !isMyTurn ? ` — tour de <b>${_currentTurnPlayer}</b>` : ''}</div>`;
+    }
+
+    document.getElementById('words-list').innerHTML = statusHtml + aliveActive.map(n=>{const w=wordsNow[n];const isNext=_currentTurnPlayer===n&&!w;return `<div class="wentry ${isNext?'active-turn':''}"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${isNext?' ✍️':''}</span>${w?`<span class="we-word">${w}</span>`:`<span class="we-pend">${isNext?'en train d\'écrire…':'en attente…'}</span>`}</div>`;}).join('');
+
     const as=document.getElementById('accuse-section');
-    if(mine&&!players[S.name]?.eliminated){
+    if(mine&&!iEliminated){
       as.style.display='block';const myAcc=accusationsNow[S.name];
       document.getElementById('accuse-btns').innerHTML=aliveActive.filter(n=>n!==S.name).map(n=>`<button class="chip ${myAcc===n?'on':''}" onclick="accuse('${n}')" ${myAcc?'disabled':''}>${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</button>`).join('');
     }else{as.style.display='none';}
@@ -953,7 +988,7 @@ function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classL
 function setLoading(on,text='CHARGEMENT'){document.getElementById('loading').classList.toggle('show',on);if(text)document.getElementById('l-text').textContent=text;}
 let _tt;
 function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3200);}
-function resetState(){S={name:null,code:null,isHost:false,myAssignment:null,cardFlipped:false,genre:'shonen',subPhase:'words'};_lastRoom=null;_myVote=null;}
+function resetState(){S={name:null,code:null,isHost:false,myAssignment:null,cardFlipped:false,genre:'shonen',subPhase:'words'};_lastRoom=null;_myVote=null;_currentTurnPlayer=null;}
 function showRules(){alert("📜 RÈGLES — UNDERCOVER ANIMÉ\n\n👥 RÔLES :\n• Civils → même perso, protégez-vous\n• Undercover → perso similaire, bluffez\n• Mr. White → ne sait rien, survivez\n\n⚠️ RÈGLE CLEF :\nDire le nom de ton perso = éliminé automatiquement !\n\n🎮 CHAQUE TOUR :\n1. Écris 1 mot (timer 45s)\n2. Pointe un suspect 👉\n3. Tout le monde vote\n4. Majorité → éliminé\n\n👁 Tu peux rejoindre en spectateur si la partie a déjà commencé\n\n🏆 Civils éliminent l'imposteur / Undercover survive / Mr. White devine le mot");}
 
 document.getElementById('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');S.genre=c.dataset.g;});
