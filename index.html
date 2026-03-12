@@ -31,13 +31,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .screen.active{display:flex;flex-direction:column;align-items:center}
 
 /* ── HOME ── */
-#s-home{justify-content:center;padding:0 20px;overflow:hidden;background:var(--ink)}
+#s-home{justify-content:center;padding:0 16px;overflow:visible;background:var(--ink)}
 .hbg{position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 75% 15%,rgba(255,45,85,.13) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 15% 80%,rgba(0,229,255,.07) 0%,transparent 60%),radial-gradient(ellipse 90% 40% at 50% 100%,rgba(255,214,10,.05) 0%,transparent 50%);pointer-events:none}
 .hgrid{position:absolute;inset:0;background-image:linear-gradient(90deg,var(--border) 1px,transparent 1px),linear-gradient(0deg,var(--border) 1px,transparent 1px);background-size:56px 56px;pointer-events:none;mask-image:radial-gradient(ellipse at center,rgba(0,0,0,.6) 0%,transparent 72%)}
-.hinner{position:relative;z-index:2;text-align:center;max-width:440px;width:100%;padding:54px 0 40px}
+.hinner{position:relative;z-index:2;text-align:center;max-width:440px;width:100%;padding:54px 4px 40px}
 .hbadge{display:inline-flex;align-items:center;gap:8px;font-family:var(--fm);font-size:10px;letter-spacing:.3em;color:var(--cyan);border:1px solid rgba(0,229,255,.3);padding:5px 14px;margin-bottom:28px;animation:fd .6s ease both}
 .hbadge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:blink 1.5s infinite}
-.htitle{font-family:var(--fd);font-size:clamp(56px,17vw,100px);line-height:.88;letter-spacing:-.02em;animation:tIn .7s cubic-bezier(.16,1,.3,1) .1s both}
+.htitle{font-family:var(--fd);font-size:clamp(44px,11.5vw,88px);line-height:.92;letter-spacing:-.01em;animation:tIn .7s cubic-bezier(.16,1,.3,1) .1s both;padding:0 12px;overflow:visible;width:100%}
 .htitle .l1{display:block;color:var(--text)}
 .htitle .l2{display:block;background:linear-gradient(135deg,var(--red) 0%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .hsub{font-family:var(--fm);font-size:11px;letter-spacing:.35em;color:var(--muted);margin:14px 0 40px;animation:fu .6s ease .3s both}
@@ -136,10 +136,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .cf-header{width:100%;background:linear-gradient(90deg,#1a1a2e,#0f0f1a);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
 .cf-role{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:rgba(255,255,255,.5);text-transform:uppercase}
 .cf-num{font-family:var(--fd);font-size:11px;color:rgba(255,255,255,.2)}
-.cf-img{width:100%;height:168px;overflow:hidden;position:relative;background:linear-gradient(135deg,#2a2a3e,#1a1a28)}
-.cf-img img{width:100%;height:100%;object-fit:cover;object-position:top center;filter:contrast(1.05) saturate(.95)}
+.cf-img{width:100%;height:195px;overflow:hidden;position:relative;background:linear-gradient(135deg,#2a2a3e,#1a1a28)}
+.cf-img img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;filter:contrast(1.03) saturate(.97)}
 .cf-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px}
-.cf-img-ov{position:absolute;bottom:0;left:0;right:0;height:38px;background:linear-gradient(transparent,#f0ead8)}
+.cf-img-ov{position:absolute;bottom:0;left:0;right:0;height:48px;background:linear-gradient(transparent,#ede5d0)}
 .cf-body{flex:1;width:100%;padding:14px 16px 12px;display:flex;flex-direction:column;align-items:center;gap:7px}
 .cf-name{font-family:var(--fd);font-size:24px;letter-spacing:.02em;text-align:center;color:#1a1a2e;line-height:1.1}
 .cf-name.unk{font-family:var(--fb);font-style:italic;font-size:17px;color:#888;font-weight:300}
@@ -441,6 +441,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><div class="tcode" id="g-codepill">----</div></div>
   <div class="wrap">
     <div class="round-hdr"><span class="round-num">TOUR <span id="g-round">1</span></span><span class="alive-cnt"><span id="g-alive">?</span> en vie</span></div>
+    <!-- TURN ORDER BANNER -->
+    <div id="turn-order-bar" style="display:none;background:var(--ink2);border:1px solid var(--border);border-left:3px solid var(--cyan);padding:10px 14px;margin-bottom:12px;font-family:var(--fm);font-size:11px;color:var(--muted);line-height:1.8">
+      <div style="font-size:9px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;margin-bottom:4px">Ordre de passage</div>
+      <div id="turn-order-list" style="display:flex;flex-wrap:wrap;gap:6px 4px"></div>
+    </div>
     <div id="timer-wrap" style="display:none"><div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div><div class="timer-label" id="timer-label"></div></div>
     <div class="my-word" id="my-word" style="display:none"><div><div class="mw-l">Ton personnage</div><div class="mw-v" id="mw-v">—</div></div><div id="mw-role" style="font-size:20px"></div></div>
     <div class="pgrid" id="pgrid"></div>
@@ -586,7 +591,13 @@ function initSocket(){
   socket.on('spectator:offer',({code,name})=>{_pendingSpec={code,name};setLoading(false);document.getElementById('spec-yes-btn').onclick=()=>joinAsSpectator();showScreen('s-specoffer');});
   socket.on('spectator:joined',({message})=>{toast(message,'ok');showScreen('s-spectator');document.getElementById('sp-codepill').textContent=S.code;});
   socket.on('your:assignment',a=>{S.myAssignment=a;buildCardFront(a);});
-  socket.on('words:all_submitted',()=>{S.subPhase='vote';clearClientTimer();if(_lastRoom)renderPlaying(_lastRoom);toast('Tous les mots soumis !','ok');soundOk();vibeOk();});
+  socket.on('words:all_submitted',({round})=>{
+    // If server transitions to next round automatically (round < 2), stay in words phase
+    // If server transitions to vote, switch phase
+    // We just wait for room:update which will carry subPhase
+    clearClientTimer();
+    toast(`Tour ${round} — mots soumis !`,'ok');soundOk();vibeOk();
+  });
   socket.on('mrwhite:your_turn',()=>{document.getElementById('mrw-box').classList.add('show');toast("À toi Mr. White — devine le perso civil !",'warn');vibe([100,50,100,50,100]);});
   socket.on('player:eliminated',({name})=>{showElimOverlay(name);soundElim();vibeElim();});
   socket.on('player:accused',({accuser,target})=>{
@@ -622,7 +633,16 @@ function handleRoomUpdate(room){
     if(cur==='s-waiting')renderReadyList(room.players);
   }
   if(room.phase==='playing'){
+    const wasInPlay = cur==='s-playing';
     if(cur==='s-waiting'||cur==='s-reveal'||cur==='s-countdown'){S.subPhase='words';_myVote=null;document.getElementById('sub-notice').classList.remove('show');document.getElementById('winput-row').style.display='flex';document.getElementById('word-input').value='';document.getElementById('tie-box').style.display='none';document.getElementById('mrw-box').classList.remove('show');showScreen('s-playing');document.getElementById('g-codepill').textContent=S.code;}
+    // Detect round change while already playing (e.g. round 1→2 auto-advance)
+    if(wasInPlay && _lastRoom && room.round !== _lastRoom.round){
+      _myVote=null;
+      document.getElementById('sub-notice').classList.remove('show');
+      document.getElementById('winput-row').style.display='flex';
+      document.getElementById('word-input').value='';
+      document.getElementById('tie-box').style.display='none';
+    }
     if(room.subPhase)S.subPhase=room.subPhase;
     renderPlaying(room);
     if(room.timerEnd)startClientTimer(room.timerEnd,room.timerPhase);
@@ -736,17 +756,42 @@ function renderPlaying(room){
   const accusationsNow=room.accusations?.[rk]||{};
   document.getElementById('g-round').textContent=room.round;
   document.getElementById('g-alive').textContent=alive.length;
+
+  // Turn order bar
+  const turnOrder=room.turnOrder||[];
+  const tobEl=document.getElementById('turn-order-bar');
+  const tolEl=document.getElementById('turn-order-list');
+  if(turnOrder.length>0&&S.subPhase==='words'){
+    tobEl.style.display='block';
+    tolEl.innerHTML=turnOrder.map((n,i)=>{
+      const hasWord=!!wordsNow[n];
+      const isMine=n===S.name;
+      return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border:1px solid ${isMine?'var(--gold)':hasWord?'rgba(0,255,135,.3)':'var(--border)'};color:${isMine?'var(--gold)':hasWord?'var(--green)':'var(--muted)'};font-size:10px;background:${isMine?'rgba(255,214,10,.06)':'transparent'}">
+        <span>${i+1}.</span>
+        <span>${EMOJIS[names.indexOf(n)%EMOJIS.length]}</span>
+        <span>${n}</span>
+        ${hasWord?'<span style="color:var(--green)">✓</span>':''}
+      </span>`;
+    }).join('');
+  } else { tobEl.style.display='none'; }
+
   const voteTally={};alive.forEach(n=>{voteTally[n]=0;});Object.values(votesNow).forEach(t=>{if(voteTally[t]!==undefined)voteTally[t]++;});
   const accTally={};alive.forEach(n=>{accTally[n]=0;});Object.values(accusationsNow).forEach(t=>{if(accTally[t]!==undefined)accTally[t]++;});
+
   if(S.myAssignment?.word){document.getElementById('my-word').style.display='flex';document.getElementById('mw-v').textContent=S.myAssignment.word;document.getElementById('mw-role').textContent=S.myAssignment.role==='undercover'?'🕵️':'👤';}
+
   document.getElementById('pgrid').innerHTML=names.map((n,i)=>{
     const acc=accTally[n]||0;
     return `<div class="pcard ${players[n].eliminated?'dead':''} ${_myVote===n&&!players[n].eliminated?'voted-for':''}"><span class="pc-em">${EMOJIS[i%EMOJIS.length]}</span><div style="flex:1"><div class="pc-n">${n}</div><div class="pc-s">${players[n].eliminated?'☠ éliminé':'en vie'}</div>${acc>0?`<div style="font-family:var(--fm);font-size:9px;color:var(--red);margin-top:2px">👉 x${acc}</div>`:''}</div>${S.subPhase==='vote'&&(voteTally[n]||0)>0&&!players[n].eliminated?`<span class="pc-votes">${voteTally[n]}▲</span>`:''}</div>`;
   }).join('');
+
   if(room.mrWhiteGuessPhase){document.getElementById('words-box').style.display='none';document.getElementById('vote-box').style.display='none';if(S.myAssignment?.role==='mr-white')document.getElementById('mrw-box').classList.add('show');return;}
+
   const aliveActive=alive.filter(n=>!players[n].eliminated);
   const allDone=aliveActive.length>0&&aliveActive.every(n=>wordsNow[n]);
   if(allDone)S.subPhase='vote';
+
+  // ── WORDS PHASE ──
   if(S.subPhase==='words'){
     document.getElementById('words-box').style.display='block';document.getElementById('vote-box').style.display='none';
     const mine=wordsNow[S.name];
@@ -759,18 +804,39 @@ function renderPlaying(room){
       document.getElementById('accuse-btns').innerHTML=aliveActive.filter(n=>n!==S.name).map(n=>`<button class="chip ${myAcc===n?'on':''}" onclick="accuse('${n}')" ${myAcc?'disabled':''}>${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</button>`).join('');
     }else{as.style.display='none';}
     renderHistory(room,names);
+
+  // ── VOTE PHASE ──
   }else{
-    document.getElementById('words-box').style.display='none';document.getElementById('vote-box').style.display='block';document.getElementById('accuse-section').style.display='none';
-    document.getElementById('ws-content').innerHTML=aliveActive.map(n=>`<div class="wentry"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</span><span class="we-word">${wordsNow[n]||'—'}</span>${(accTally[n]||0)>0?`<span style="font-family:var(--fm);font-size:10px;color:var(--red);margin-left:4px">👉${accTally[n]}</span>`:''}</div>`).join('');
+    document.getElementById('words-box').style.display='none';document.getElementById('vote-box').style.display='block';document.getElementById('accuse-section').style.display='none';tobEl.style.display='none';
+
+    // Show all rounds words in summary (not just current round)
+    let wsHtml='';
+    for(let r=Math.max(1,room.round-1);r<=room.round;r++){
+      const rwk=`round${r}`;const rw=room.words?.[rwk]||{};
+      const hasWords=aliveActive.some(n=>rw[n]);
+      if(hasWords)wsHtml+=`<div style="font-family:var(--fm);font-size:9px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;margin-top:${r>1?'10px':'0'}">Tour ${r}</div>`+aliveActive.map(n=>`<div class="wentry"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</span><span class="we-word">${rw[n]||'—'}</span>${(accTally[n]||0)>0&&r===room.round?`<span style="font-family:var(--fm);font-size:10px;color:var(--red);margin-left:4px">👉${accTally[n]}</span>`:''}</div>`).join('');
+    }
+    document.getElementById('ws-content').innerHTML=wsHtml;
+
     const hn=document.getElementById('host-note'),vb=document.getElementById('vbtns');
     const myVoted=players[S.name]?.voted;
-    hn.textContent=S.isHost?"Vote en direct — clique pour appliquer l'élimination.":(myVoted?'Vote envoyé ✓':'Vote pour le suspect.');
+    hn.textContent=myVoted?'Vote envoyé ✓ — en attente des autres.':'Vote pour le suspect à éliminer.';
+
     const maxV=Math.max(...Object.values(voteTally),0);
+    // Everyone votes the same way — host is NOT special during vote
     vb.innerHTML=aliveActive.map(n=>{
       const votes=voteTally[n]||0,isL=votes>0&&votes===maxV,isM=_myVote===n;
-      if(S.isHost)return `<button class="vbtn ${isL?'leading':''}" onclick="if(confirm('Éliminer ${n} ?'))socket.emit('vote:eliminate',{target:'${n}'})">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${votes>0?`<span class="vbtn-votes">${votes}v</span>`:''}</button>`;
-      return `<button class="vbtn ${isM?'selected':''} ${isL?'leading':''}" onclick="castVote('${n}')" ${myVoted&&!isM?'disabled':''}>${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${votes>0?`<span class="vbtn-votes">${votes}v</span>`:''}</button>`;
+      const isSelf=n===S.name;
+      return `<button class="vbtn ${isM?'selected':''} ${isL?'leading':''}" onclick="castVote('${n}')" ${(myVoted&&!isM)||isSelf?'disabled':''}>${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${votes>0?`<span class="vbtn-votes">${votes}v</span>`:''}</button>`;
     }).join('');
+
+    // Host override section (separate from normal vote buttons)
+    if(S.isHost){
+      vb.innerHTML+=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">⚡ Décision hôte (override)</div>
+        ${aliveActive.map(n=>`<button class="vbtn" style="border-color:rgba(255,45,85,.2)" onclick="if(confirm('Forcer l\\'élimination de ${n} ?'))socket.emit('vote:eliminate',{target:'${n}'})">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n} <span style="margin-left:auto;font-family:var(--fm);font-size:10px;color:var(--red)">FORCER</span></button>`).join('')}
+      </div>`;
+    }
   }
 }
 
