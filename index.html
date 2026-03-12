@@ -299,12 +299,43 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 @keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes scoreUp{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:none}}
 
+/* ── WORD REVEAL CARD ── */
+.word-reveal-overlay{position:fixed;inset:0;z-index:7000;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.word-reveal-card{background:var(--ink2);border:1px solid var(--border2);border-top:3px solid var(--gold);padding:0;width:min(88vw,340px);box-shadow:0 24px 60px rgba(0,0,0,.7);transform:translateY(40px) scale(.94);opacity:0;transition:transform .35s cubic-bezier(.16,1,.3,1), opacity .3s ease;pointer-events:none}
+.word-reveal-card.show{transform:translateY(0) scale(1);opacity:1}
+.wrc-top{padding:12px 18px 0;display:flex;align-items:center;gap:10px}
+.wrc-emoji{font-size:22px}
+.wrc-author{font-family:var(--fm);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.wrc-name{font-size:14px;font-weight:700;color:var(--text)}
+.wrc-body{padding:14px 18px 18px;display:flex;align-items:center;gap:10px}
+.wrc-said{font-family:var(--fm);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.wrc-word{font-family:var(--fd);font-size:32px;letter-spacing:.04em;color:var(--gold);line-height:1}
+.wrc-bar{height:3px;background:linear-gradient(90deg,var(--red),var(--gold));animation:wrcBar .5s ease .1s both}
+@keyframes wrcBar{from{transform:scaleX(0);transform-origin:left}to{transform:scaleX(1);transform-origin:left}}
+
 @keyframes cdPulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.8}100%{transform:scale(1);opacity:1}}
 
 @media(max-width:380px){.hcards{grid-template-columns:1fr}.pgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
+
+<!-- WORD REVEAL CARD -->
+<div class="word-reveal-overlay" id="word-reveal-overlay">
+  <div class="word-reveal-card" id="word-reveal-card">
+    <div class="wrc-bar"></div>
+    <div class="wrc-top">
+      <span class="wrc-emoji" id="wrc-emoji">🐉</span>
+      <div><div class="wrc-author">a dit</div><div class="wrc-name" id="wrc-name">Joueur</div></div>
+    </div>
+    <div class="wrc-body">
+      <div>
+        <div class="wrc-said">son mot</div>
+        <div class="wrc-word" id="wrc-word">—</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- LOADING -->
 <div class="loverlay" id="loading"><div class="l-text" id="l-text">CHARGEMENT</div><div class="l-bar"><div class="l-fill"></div></div></div>
@@ -612,6 +643,9 @@ function initSocket(){
     vibe([60,30,60]);
   });
   socket.on('vote:restore',({target})=>{_myVote=target;if(_lastRoom)renderPlaying(_lastRoom);});
+  socket.on('word:revealed',({player, word})=>{
+    showWordReveal(player, word);
+  });
   socket.on('word:blocked',({word})=>{soundError();vibeError();const inp=document.getElementById('word-input');inp.classList.add('blocked');setTimeout(()=>inp.classList.remove('blocked'),600);toast(`🚫 "${word}" contient ton perso — tu es éliminé !`,'err');});
   socket.on('game:countdown',n=>{
     if(n>0){showScreen('s-countdown');const el=document.getElementById('cd-number');el.textContent=n;el.style.animation='none';void el.offsetWidth;el.style.animation='cdPulse .9s ease-in-out infinite';}
@@ -845,6 +879,35 @@ function renderHistory(room,names){const h=document.getElementById('hist-section
 function castVote(target){if(_myVote)return;_myVote=target;socket.emit('vote:cast',{target});soundOk();vibeOk();if(_lastRoom)renderPlaying(_lastRoom);}
 function submitWord(){const input=document.getElementById('word-input');const word=input.value.trim();if(!word){toast('Entre un mot !','err');return;}socket.emit('word:submit',{word});input.value='';soundOk();vibeOk();if(_lastRoom){const rk=`round${_lastRoom.round}`;if(!_lastRoom.words)_lastRoom.words={};if(!_lastRoom.words[rk])_lastRoom.words[rk]={};_lastRoom.words[rk][S.name]=word;document.getElementById('winput-row').style.display='none';document.getElementById('sub-notice').classList.add('show');renderPlaying(null);}}
 function submitMrwGuess(){const g=document.getElementById('mrw-input').value.trim();if(!g)return;socket.emit('mrwhite:guess',{guess:g});document.getElementById('mrw-box').classList.remove('show');}
+
+// ── WORD REVEAL CARD ──
+let _revealQueue=[], _revealActive=false;
+function showWordReveal(player, word){
+  _revealQueue.push({player,word});
+  if(!_revealActive)processRevealQueue();
+}
+function processRevealQueue(){
+  if(_revealQueue.length===0){_revealActive=false;return;}
+  _revealActive=true;
+  const {player,word}=_revealQueue.shift();
+  const room=_lastRoom;
+  const players=room?.players||{};
+  const names=Object.keys(players).filter(n=>!players[n].isSpectator);
+  const idx=names.indexOf(player);
+  document.getElementById('wrc-emoji').textContent=EMOJIS[idx>=0?idx%EMOJIS.length:0];
+  document.getElementById('wrc-name').textContent=player;
+  document.getElementById('wrc-word').textContent=word;
+  const card=document.getElementById('word-reveal-card');
+  // Rebuild bar animation
+  const bar=card.querySelector('.wrc-bar');
+  bar.style.animation='none';void bar.offsetWidth;bar.style.animation='wrcBar .5s ease .1s both';
+  card.classList.add('show');
+  beep(600,.08,.12);vibe(30);
+  setTimeout(()=>{
+    card.classList.remove('show');
+    setTimeout(()=>processRevealQueue(), 200);
+  }, 2200);
+}
 
 // ── ELIM OVERLAY ──
 function showElimOverlay(name){const el=document.getElementById('elim-overlay');document.getElementById('elim-name').textContent=name;document.getElementById('elim-sub').textContent='a été éliminé de la partie';document.getElementById('elim-continue').style.display='none';el.classList.add('show');setTimeout(()=>{document.getElementById('elim-continue').style.display='block';setTimeout(()=>el.classList.remove('show'),3000);},2500);}
