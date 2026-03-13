@@ -492,6 +492,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div id="l-players"></div>
     <div id="l-host-ctrl" style="display:none;margin-top:16px">
       <div class="info-box">Minimum 3 joueurs pour lancer.</div>
+      <button class="btn btn-outline btn-full" id="l-add-bot" onclick="addBot()" style="margin-bottom:8px;font-size:13px">🤖 AJOUTER UN BOT IA</button>
       <button class="btn btn-gold btn-full" id="l-start" onclick="hostStart()" disabled>LANCER →</button>
     </div>
     <div id="l-guest-wait" style="display:none;margin-top:16px;font-family:var(--fm);font-size:12px;color:var(--muted);text-align:center;letter-spacing:.1em">En attente que l'hôte lance…</div>
@@ -806,7 +807,10 @@ function renderLobby(room){
   document.getElementById('l-host-ctrl').style.display=S.isHost?'block':'none';
   document.getElementById('l-guest-wait').style.display=S.isHost?'none':'block';
   const names=Object.keys(room.players).filter(n=>!room.players[n].isSpectator);
-  document.getElementById('l-players').innerHTML=names.map((n,i)=>`<div class="prow"><div class="sdot ${room.players[n].connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}</div><div class="ptag">${n===room.host?'★ HÔTE':room.players[n].connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}</div>`).join('');
+  document.getElementById('l-players').innerHTML=names.map((n,i)=>{
+    const p=room.players[n];const isBot=p.isBot||false;
+    return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
+  }).join('');
   if(S.isHost)document.getElementById('l-start').disabled=names.filter(n=>room.players[n].connected).length<3;
   const scores=room.scores||{};const hasScores=names.some(n=>(scores[n]?.wins||0)>0);
   const ss=document.getElementById('scores-section');
@@ -837,6 +841,8 @@ function joinAsSpectator(){
   _isSpectator=true;
   socket.emit('room:join',{name:_pendingSpec.name,code:_pendingSpec.code,asSpectator:true});
 }
+function addBot(){socket.emit('bot:add');}
+function removeBot(name){socket.emit('bot:remove',{botName:name});}
 function leaveRoom(){
   if(socket)socket.emit('room:leave');
   sessionStorage.removeItem('uc');clearClientTimer();resetState();_isSpectator=false;_pendingSpec=null;
@@ -916,7 +922,8 @@ function renderPlaying(room){
 
   document.getElementById('pgrid').innerHTML=names.map((n,i)=>{
     const acc=accTally[n]||0;
-    return `<div class="pcard ${players[n].eliminated?'dead':''} ${_myVote===n&&!players[n].eliminated?'voted-for':''}"><span class="pc-em">${EMOJIS[i%EMOJIS.length]}</span><div style="flex:1"><div class="pc-n">${n}</div><div class="pc-s">${players[n].eliminated?'☠ éliminé':'en vie'}</div>${acc>0?`<div style="font-family:var(--fm);font-size:9px;color:var(--red);margin-top:2px">👉 x${acc}</div>`:''}</div>${S.subPhase==='vote'&&(voteTally[n]||0)>0&&!players[n].eliminated?`<span class="pc-votes">${voteTally[n]}▲</span>`:''}</div>`;
+    const isBot=players[n]?.isBot||false;
+    return `<div class="pcard ${players[n].eliminated?'dead':''} ${_myVote===n&&!players[n].eliminated?'voted-for':''}"><span class="pc-em">${EMOJIS[i%EMOJIS.length]}</span><div style="flex:1"><div class="pc-n">${n}${isBot?' <span style=\"font-family:var(--fm);font-size:8px;color:var(--cyan);letter-spacing:.1em\">BOT</span>':''}</div><div class="pc-s">${players[n].eliminated?'☠ éliminé':'en vie'}</div>${acc>0?`<div style="font-family:var(--fm);font-size:9px;color:var(--red);margin-top:2px">👉 x${acc}</div>`:''}</div>${S.subPhase==='vote'&&(voteTally[n]||0)>0&&!players[n].eliminated?`<span class="pc-votes">${voteTally[n]}▲</span>`:''}</div>`;
   }).join('');
 
   if(room.mrWhiteGuessPhase){document.getElementById('words-box').style.display='none';document.getElementById('vote-box').style.display='none';if(S.myAssignment?.role==='mr-white')document.getElementById('mrw-box').classList.add('show');return;}
@@ -949,7 +956,7 @@ function renderPlaying(room){
       statusHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--green);letter-spacing:.1em">✓ Mot envoyé${_currentTurnPlayer && !isMyTurn ? ` — tour de <b>${_currentTurnPlayer}</b>` : ''}</div>`;
     }
 
-    document.getElementById('words-list').innerHTML = statusHtml + aliveActive.map(n=>{const w=wordsNow[n];const isNext=_currentTurnPlayer===n&&!w;return `<div class="wentry ${isNext?'active-turn':''}"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${isNext?' ✍️':''}</span>${w?`<span class="we-word">${w}</span>`:`<span class="we-pend">${isNext?'en train d\'écrire…':'en attente…'}</span>`}</div>`;}).join('');
+    document.getElementById('words-list').innerHTML = statusHtml + aliveActive.map(n=>{const w=wordsNow[n];const isNext=_currentTurnPlayer===n&&!w;const isBot=players[n]?.isBot;return `<div class="wentry ${isNext?'active-turn':''}"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${isBot?' 🤖':''}${isNext?' ✍️':''}</span>${w?`<span class="we-word">${w}</span>`:`<span class="we-pend">${isNext?(isBot?'le bot réfléchit…':'en train d\'écrire…'):'en attente…'}</span>`}</div>`;}).join('');
 
     const as=document.getElementById('accuse-section');
     if(mine&&!iEliminated){
