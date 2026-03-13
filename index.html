@@ -695,19 +695,29 @@ const EMOJIS=['🐉','⚔️','🌊','🔥','⚡','🌙','🎯','🗡️','🛡�
 function initSocket(){
   if(socket?.connected)return;
   socket=io(SERVER_URL,{transports:['websocket','polling']});
-  socket.on('connect',()=>{const s=sessionStorage.getItem('uc');if(s)try{socket.emit('room:reconnect',JSON.parse(s));}catch{}});
+  socket.on('connect',()=>{
+    const s=sessionStorage.getItem('uc');
+    // Only reconnect if we have a session AND we're not currently in a fresh join flow
+    if(s && S.code){
+      try{socket.emit('room:reconnect',JSON.parse(s));}catch{}
+    } else if(s && !S.name){
+      // Page reload — try to reconnect
+      try{socket.emit('room:reconnect',JSON.parse(s));}catch{}
+    }
+  });
   socket.on('disconnect',()=>toast('Connexion perdue…','err'));
   socket.on('error', msg => {
+    soundError(); vibeError(); setLoading(false);
     if(msg && msg.includes('Session introuvable')) {
       sessionStorage.removeItem('uc');
       resetState();
       showScreen('s-home');
-      setTimeout(()=>toast('Session expirée — le serveur a redémarré','err'),300);
+      setTimeout(()=>toast('⚠️ Session expirée, relance une partie !','err'),300);
     } else {
       toast(msg||'Erreur','err');
     }
   });
-  socket.on('error',msg=>{toast(msg,'err');soundError();vibeError();setLoading(false);});
+
   socket.on('loading',on=>setLoading(on));
   socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);});
   socket.on('room:promoted',()=>{S.isHost=true;toast("Tu es maintenant l'hôte !",'ok');});
