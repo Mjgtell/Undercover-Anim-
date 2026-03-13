@@ -697,6 +697,16 @@ function initSocket(){
   socket=io(SERVER_URL,{transports:['websocket','polling']});
   socket.on('connect',()=>{const s=sessionStorage.getItem('uc');if(s)try{socket.emit('room:reconnect',JSON.parse(s));}catch{}});
   socket.on('disconnect',()=>toast('Connexion perdue…','err'));
+  socket.on('error', msg => {
+    if(msg && msg.includes('Session introuvable')) {
+      sessionStorage.removeItem('uc');
+      resetState();
+      showScreen('s-home');
+      setTimeout(()=>toast('Session expirée — le serveur a redémarré','err'),300);
+    } else {
+      toast(msg||'Erreur','err');
+    }
+  });
   socket.on('error',msg=>{toast(msg,'err');soundError();vibeError();setLoading(false);});
   socket.on('loading',on=>setLoading(on));
   socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);});
