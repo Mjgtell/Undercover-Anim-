@@ -877,7 +877,7 @@ function hostStart(){
 // ── CARD ──
 function buildCardFront(a){
   const imgEl=document.getElementById('cf-img');
-  if(a.image){imgEl.innerHTML=`<img src="${a.image}" alt="" onerror="this.parentElement.innerHTML='<div class=cf-img-ph>🎭</div>'"/>`;}
+  if(a.image){const proxyUrl=`https://wsrv.nl/?url=${encodeURIComponent(a.image)}&w=300&output=jpg`;imgEl.innerHTML=`<img src="${proxyUrl}" alt="" onerror="this.parentElement.innerHTML='<div class=cf-img-ph>🎭</div>'"/>`;}
   else{imgEl.innerHTML=`<div class="cf-img-ph">${a.role==='mr-white'?'❓':'🎭'}</div>`;}
   if(a.role==='mr-white'){document.getElementById('cf-name').textContent='Rôle caché';document.getElementById('cf-name').className='cf-name unk';document.getElementById('cf-hint').textContent='Tu ne sais pas quel perso. Bluff pour survivre !';}
   else{document.getElementById('cf-name').textContent=a.word||'—';document.getElementById('cf-name').className='cf-name';document.getElementById('cf-hint').textContent=`⚠️ Interdit : ${(a.blockedWords||[]).join(', ')||a.word}`;}
