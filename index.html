@@ -453,7 +453,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <h1 class="htitle"><span class="l1">UNDER</span><span class="l2">COVER</span></h1>
     <p class="hsub">— ANIMÉ EDITION —</p>
     <div class="hcards">
-      <div class="hcard" onclick="showScreen('s-create')"><span class="hci">🎮</span><div class="hct">CRÉER</div><div class="hcd">Nouvelle partie</div></div>
+      <div class="hcard" onclick="showScreen('s-mode-select')"><span class="hci">🎮</span><div class="hct">CRÉER</div><div class="hcd">Nouvelle partie</div></div>
       <div class="hcard" onclick="showScreen('s-join')"><span class="hci">🔗</span><div class="hct">REJOINDRE</div><div class="hcd">Code de salle</div></div>
     </div>
     <div class="hfooter">
@@ -463,12 +463,35 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 </div>
 
 <!-- ════ CREATE ════ -->
-<div id="s-create" class="screen">
+<!-- ════ MODE SELECT ════ -->
+<div id="s-mode-select" class="screen">
   <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><button class="btn btn-outline" onclick="showScreen('s-home')">← Retour</button></div>
   <div class="wrap">
-    <div class="stag">Hôte</div>
-    <div class="ptitle">CRÉER UNE SALLE</div>
+    <div class="stag">Créer une salle</div>
+    <div class="ptitle">CHOISIS UN MODE</div>
     <div class="field"><label>Ton prénom</label><input type="text" id="c-name" placeholder="Ton prénom…" maxlength="20" autocomplete="off"/></div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+      <div onclick="selectMode('undercover')" id="mode-uc" style="background:var(--ink2);border:2px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:border-color .2s">
+        <div style="font-size:22px;margin-bottom:6px">🕵️</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">UNDERCOVER</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Trouve l'imposteur avant qu'il ne te grille. Donne des indices, bluff, vote.</div>
+      </div>
+      <div onclick="selectMode('tierlist')" id="mode-tl" style="background:var(--ink2);border:2px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:border-color .2s">
+        <div style="font-size:22px;margin-bottom:6px">🏆</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">TIERLIST</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Classe 10 persos d'un animé aléatoire. Le meilleur classement gagne le vote. Premier à 10 points gagne.</div>
+      </div>
+    </div>
+    <button class="btn btn-red btn-full" id="mode-confirm-btn" style="margin-top:20px;opacity:.4;pointer-events:none" onclick="confirmModeAndCreate()">CRÉER LA SALLE →</button>
+  </div>
+</div>
+
+<!-- ════ CREATE (undercover options) ════ -->
+<div id="s-create" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><button class="btn btn-outline" onclick="showScreen('s-mode-select')">← Retour</button></div>
+  <div class="wrap">
+    <div class="stag">Mode Undercover</div>
+    <div class="ptitle">OPTIONS</div>
     <div class="field"><label>Genre d'animé</label>
       <div class="chips" id="chips">
         <button class="chip on" data-g="shonen">Shōnen</button>
@@ -525,8 +548,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div id="l-host-ctrl" style="display:none;margin-top:16px">
       <div class="info-box">Minimum 3 joueurs pour lancer.</div>
       <button class="btn btn-outline btn-full" id="l-add-bot" onclick="addBot()" style="margin-bottom:8px;font-size:13px">🤖 AJOUTER UN BOT IA</button>
-      <button class="btn btn-gold btn-full" id="l-start" onclick="hostStart()" disabled>UNDERCOVER →</button>
-      <button class="btn btn-outline btn-full" id="l-tierlist" onclick="hostStartTierlist()" style="margin-top:8px;border-color:var(--cyan);color:var(--cyan);font-size:13px" disabled>🏆 TIERLIST →</button>
+      <div id="l-mode-badge" style="text-align:center;font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);margin-bottom:6px"></div>
+      <button class="btn btn-gold btn-full" id="l-start" onclick="hostStartAuto()" disabled>LANCER →</button>
+
     </div>
     <div id="l-guest-wait" style="display:none;margin-top:16px;font-family:var(--fm);font-size:12px;color:var(--muted);text-align:center;letter-spacing:.1em">En attente que l'hôte lance…</div>
     <div class="btn-row" style="margin-top:20px"><button class="btn btn-outline" onclick="leaveRoom()">Quitter</button></div>
@@ -908,13 +932,15 @@ function renderSpectator(room){
 }
 
 // ── LOBBY ──
-function renderLobby(room){
+function renderLobby(room){ _lastRoom=room;
   document.getElementById('l-codepill').textContent=room.code;
   document.getElementById('l-code').textContent=room.code;
   document.getElementById('l-title').textContent=S.isHost?'TA SALLE':'CONNECTÉ !';
   document.getElementById('l-host-ctrl').style.display=S.isHost?'block':'none';
   document.getElementById('l-guest-wait').style.display=S.isHost?'none':'block';
   const names=Object.keys(room.players).filter(n=>!room.players[n].isSpectator);
+  const badge=document.getElementById('l-mode-badge');
+  if(badge){badge.textContent=room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
   document.getElementById('l-players').innerHTML=names.map((n,i)=>{
     const p=room.players[n];const isBot=p.isBot||false;
     return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
@@ -949,6 +975,37 @@ function joinAsSpectator(){
   _isSpectator=true;
   socket.emit('room:join',{name:_pendingSpec.name,code:_pendingSpec.code,asSpectator:true});
 }
+let _selectedMode = null;
+
+function selectMode(mode) {
+  _selectedMode = mode;
+  document.getElementById('mode-uc').style.borderColor = mode==='undercover' ? 'var(--gold)' : 'var(--border)';
+  document.getElementById('mode-tl').style.borderColor = mode==='tierlist' ? 'var(--cyan)' : 'var(--border)';
+  const btn = document.getElementById('mode-confirm-btn');
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+  btn.style.borderColor = mode==='tierlist' ? 'var(--cyan)' : '';
+}
+
+function confirmModeAndCreate() {
+  const name = document.getElementById('c-name').value.trim();
+  if(!name) { toast('Entre ton prénom !','err'); return; }
+  if(_selectedMode === 'undercover') {
+    showScreen('s-create');
+  } else if(_selectedMode === 'tierlist') {
+    // Create room then immediately start tierlist
+    createRoomWithMode('tierlist');
+  }
+}
+
+function createRoomWithMode(mode) {
+  const name = document.getElementById('c-name').value.trim();
+  if(!name){toast('Entre ton prénom !','err');return;}
+  initSocket();
+  setLoading(true,'CRÉATION…');
+  socket.emit('room:create',{name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode});
+}
+
 function addBot(){socket.emit('bot:add');}
 function removeBot(name){socket.emit('bot:remove',{botName:name});}
 function leaveRoom(){
@@ -961,6 +1018,17 @@ function hostStart(){
   setLoading(true,'PRÉPARATION…');
   socket.emit('game:start',{genre:S.genre,settings:{mrWhite:document.getElementById('opt-mrw')?.checked,doubleUndercover:document.getElementById('opt-uc2')?.checked,wordTimer:document.getElementById('opt-timer')?.checked}});
 }
+function hostStartAuto() {
+  if(!S.isHost) return;
+  // Check room mode from server
+  const room = _lastRoom;
+  if(room && room.mode === 'tierlist') {
+    hostStartTierlist();
+  } else {
+    hostStart();
+  }
+}
+
 
 // ── CARD ──
 function buildCardFront(a){
