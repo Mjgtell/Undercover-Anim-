@@ -481,8 +481,110 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <div style="font-weight:700;font-size:16px;margin-bottom:4px">TIERLIST</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.5">Classe 10 persos d'un animé aléatoire. Le meilleur classement gagne le vote. Premier à 10 points gagne.</div>
       </div>
+      <div onclick="selectMode('music')" id="mode-music" style="background:var(--ink2);border:2px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:border-color .2s">
+        <div style="font-size:22px;margin-bottom:6px">🎵</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">MUSIC RATING</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Écoute des openings/endings et note-les sur 10. Compare tes goûts avec les autres et débat.</div>
+      </div>
     </div>
     <button class="btn btn-red btn-full" id="mode-confirm-btn" style="margin-top:20px;opacity:.4;pointer-events:none" onclick="confirmModeAndCreate()">CRÉER LA SALLE →</button>
+  </div>
+</div>
+
+<!-- ════ MUSIC OPTIONS ════ -->
+<div id="s-music-options" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><button class="btn btn-outline" onclick="showScreen('s-mode-select')">← Retour</button></div>
+  <div class="wrap">
+    <div class="stag">Mode Music Rating</div>
+    <div class="ptitle">OPTIONS</div>
+    <div class="field">
+      <label>Type de musiques</label>
+      <div class="chips" id="music-type-chips">
+        <button class="chip on" data-t="both">Tout</button>
+        <button class="chip" data-t="OP">Openings</button>
+        <button class="chip" data-t="ED">Endings</button>
+      </div>
+    </div>
+    <div class="field" style="margin-top:16px">
+      <label>Nombre de musiques</label>
+      <div class="chips" id="music-count-chips">
+        <button class="chip" data-c="3">3</button>
+        <button class="chip" data-c="5">5</button>
+        <button class="chip on" data-c="8">8</button>
+        <button class="chip" data-c="10">10</button>
+        <button class="chip" data-c="15">15</button>
+      </div>
+    </div>
+    <button class="btn btn-gold btn-full" style="margin-top:24px" onclick="createRoomMusic()">CRÉER LA SALLE →</button>
+  </div>
+</div>
+
+<!-- ════ MUSIC PLAYER SCREEN ════ -->
+<div id="s-music-player" class="screen" style="overflow-y:auto">
+  <div class="topbar">
+    <div class="tlogo">UNDER<span>COVER</span></div>
+    <div style="font-family:var(--fm);font-size:10px;color:var(--muted)" id="mp-progress"></div>
+  </div>
+  <div class="wrap" style="padding-top:8px">
+    <!-- Track info -->
+    <div style="background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center">
+      <div style="font-family:var(--fm);font-size:9px;letter-spacing:.15em;color:var(--cyan);margin-bottom:6px" id="mp-type-label"></div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:4px" id="mp-song-title"></div>
+      <div style="font-size:13px;color:var(--muted)" id="mp-anime-name"></div>
+    </div>
+    <!-- Audio player -->
+    <div style="background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <button onclick="togglePlay()" id="mp-play-btn" style="width:48px;height:48px;border-radius:50%;background:var(--gold);color:#000;border:none;font-size:20px;cursor:pointer;flex-shrink:0">▶</button>
+        <div style="flex:1">
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;cursor:pointer" onclick="seekAudio(event)" id="mp-bar-wrap">
+            <div id="mp-bar" style="height:100%;background:var(--gold);width:0%;transition:width .2s;border-radius:2px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;font-family:var(--fm);font-size:9px;color:var(--muted)">
+            <span id="mp-time-cur">0:00</span>
+            <span id="mp-time-tot">0:00</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="playSegment('intro')" class="btn btn-outline" style="font-size:11px;padding:6px 12px">▶ Début (10s)</button>
+        <button onclick="playSegment('chorus')" class="btn btn-outline" style="font-size:11px;padding:6px 12px">▶ Refrain (1min)</button>
+      </div>
+    </div>
+    <!-- Rating -->
+    <div style="background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);margin-bottom:10px">TA NOTE</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input type="range" id="mp-rating-slider" min="0" max="10" step="0.5" value="5"
+          style="flex:1;accent-color:var(--gold)"
+          oninput="updateMyRating(this.value)">
+        <div style="font-size:28px;font-weight:700;font-family:var(--fm);min-width:40px;color:var(--gold)" id="mp-rating-val">5.0</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:2px">
+        <span>0 — nul</span><span>5 — bof</span><span>10 — chef-d'œuvre</span>
+      </div>
+    </div>
+    <!-- Live ratings from others -->
+    <div style="background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);margin-bottom:10px">NOTES EN DIRECT</div>
+      <div id="mp-live-ratings"></div>
+    </div>
+    <!-- Host next button -->
+    <div id="mp-host-controls" style="display:none">
+      <button class="btn btn-gold btn-full" onclick="socket.emit('music:next')">MUSIQUE SUIVANTE →</button>
+    </div>
+    <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="socket.emit('music:reset')">QUITTER</button>
+  </div>
+</div>
+
+<!-- ════ MUSIC DONE SCREEN ════ -->
+<div id="s-music-done" class="screen" style="overflow-y:auto">
+  <div class="wrap" style="text-align:center;padding-top:40px">
+    <div style="font-size:40px;margin-bottom:12px">🎵</div>
+    <div class="ptitle" style="margin-bottom:8px">Session terminée !</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Récap de vos notes</div>
+    <div id="music-recap" style="text-align:left"></div>
+    <button class="btn btn-gold btn-full" style="margin-top:20px" onclick="socket.emit('music:reset')">RETOUR LOBBY</button>
   </div>
 </div>
 
@@ -824,7 +926,7 @@ function initSocket(){
   });
 
   socket.on('loading',on=>setLoading(on));
-  socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);});
+  socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);if(window._pendingMusicSettings&&isHost){setTimeout(()=>{socket.emit('music:start',window._pendingMusicSettings);window._pendingMusicSettings=null;},800);};});
   socket.on('room:promoted',()=>{S.isHost=true;toast("Tu es maintenant l'hôte !",'ok');});
   socket.on('room:update',room=>handleRoomUpdate(room));
   socket.on('spectator:offer',({code,name})=>{_pendingSpec={code,name};setLoading(false);document.getElementById('spec-yes-btn').onclick=()=>joinAsSpectator();showScreen('s-specoffer');});
@@ -883,6 +985,8 @@ function handleRoomUpdate(room){
   if(room.phase==='tierlist'){
     _tlVoted=!!room.tierlist?.votes?.[S.name];
     handleTierlistUpdate(room);
+  } else if(room.phase==='music'){
+    handleMusicUpdate(room);
   } else if(room.phase==='lobby'){
     // Reset tierlist state when returning to lobby
     _tlSubmitted=false; _tlVoted=false; _tlRanking=[];
@@ -940,7 +1044,7 @@ function renderLobby(room){ _lastRoom=room;
   document.getElementById('l-guest-wait').style.display=S.isHost?'none':'block';
   const names=Object.keys(room.players).filter(n=>!room.players[n].isSpectator);
   const badge=document.getElementById('l-mode-badge');
-  if(badge){badge.textContent=room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
+  if(badge){badge.textContent=room.mode==='music'?'🎵 MODE MUSIC RATING':room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
   document.getElementById('l-players').innerHTML=names.map((n,i)=>{
     const p=room.players[n];const isBot=p.isBot||false;
     return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
@@ -975,12 +1079,173 @@ function joinAsSpectator(){
   _isSpectator=true;
   socket.emit('room:join',{name:_pendingSpec.name,code:_pendingSpec.code,asSpectator:true});
 }
+// ══════════════════════════════════════
+//  MUSIC RATING MODE
+// ══════════════════════════════════════
+let _musicAudio = null;
+let _musicSegTimer = null;
+let _musicCurrentTrack = null;
+
+// Chip selection for music options
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#music-type-chips .chip').forEach(b => {
+    b.onclick = () => { document.querySelectorAll('#music-type-chips .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+  });
+  document.querySelectorAll('#music-count-chips .chip').forEach(b => {
+    b.onclick = () => { document.querySelectorAll('#music-count-chips .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+  });
+});
+
+function createRoomMusic() {
+  const name = document.getElementById('c-name').value.trim();
+  if(!name){ toast('Entre ton prénom !','err'); return; }
+  const type = document.querySelector('#music-type-chips .chip.on')?.dataset.t || 'both';
+  const count = parseInt(document.querySelector('#music-count-chips .chip.on')?.dataset.c || '8');
+  initSocket();
+  setLoading(true,'CRÉATION…');
+  socket.emit('room:create', { name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode:'music' });
+  // Store settings to emit after joining
+  window._pendingMusicSettings = { type, count };
+}
+
+function handleMusicUpdate(room) {
+  const m = room.music;
+  if(!m) return;
+  if(m.phase === 'done') { showScreen('s-music-done'); renderMusicRecap(room); return; }
+  if(m.phase !== 'playing') return;
+  showScreen('s-music-player');
+  const track = m.tracks[m.currentIndex];
+  if(!track) return;
+  // Update UI
+  document.getElementById('mp-progress').textContent = `${m.currentIndex+1} / ${m.tracks.length}`;
+  document.getElementById('mp-type-label').textContent = `${track.type}${track.sequence > 1 ? track.sequence : ''} — ${track.anime}`;
+  document.getElementById('mp-song-title').textContent = track.title;
+  document.getElementById('mp-anime-name').textContent = track.anime;
+  document.getElementById('mp-host-controls').style.display = S.isHost ? 'block' : 'none';
+  // Load audio if track changed
+  if(!_musicCurrentTrack || _musicCurrentTrack.id !== track.id) {
+    _musicCurrentTrack = track;
+    loadAudio(track.audioUrl);
+    // Reset rating slider
+    document.getElementById('mp-rating-slider').value = 5;
+    document.getElementById('mp-rating-val').textContent = '5.0';
+  }
+  // Render live ratings
+  renderLiveRatings(m);
+}
+
+function loadAudio(url) {
+  if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
+  if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
+  _musicAudio = new Audio(url);
+  _musicAudio.crossOrigin = 'anonymous';
+  _musicAudio.addEventListener('timeupdate', updateAudioBar);
+  _musicAudio.addEventListener('loadedmetadata', () => {
+    document.getElementById('mp-time-tot').textContent = fmtTime(_musicAudio.duration);
+  });
+  document.getElementById('mp-play-btn').textContent = '▶';
+  document.getElementById('mp-bar').style.width = '0%';
+}
+
+function togglePlay() {
+  if(!_musicAudio) return;
+  if(_musicAudio.paused) { _musicAudio.play(); document.getElementById('mp-play-btn').textContent = '⏸'; }
+  else { _musicAudio.pause(); document.getElementById('mp-play-btn').textContent = '▶'; }
+}
+
+function playSegment(seg) {
+  if(!_musicAudio) return;
+  if(_musicSegTimer) clearTimeout(_musicSegTimer);
+  if(seg === 'intro') {
+    _musicAudio.currentTime = 0;
+    _musicAudio.play();
+    document.getElementById('mp-play-btn').textContent = '⏸';
+    _musicSegTimer = setTimeout(() => {
+      _musicAudio.pause();
+      document.getElementById('mp-play-btn').textContent = '▶';
+    }, 10000);
+  } else {
+    _musicAudio.currentTime = 60;
+    _musicAudio.play();
+    document.getElementById('mp-play-btn').textContent = '⏸';
+    _musicSegTimer = setTimeout(() => {
+      _musicAudio.pause();
+      document.getElementById('mp-play-btn').textContent = '▶';
+    }, 20000);
+  }
+  beep(440, 0.1); vibe(30);
+}
+
+function seekAudio(e) {
+  if(!_musicAudio || !_musicAudio.duration) return;
+  const rect = document.getElementById('mp-bar-wrap').getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  _musicAudio.currentTime = pct * _musicAudio.duration;
+}
+
+function updateAudioBar() {
+  if(!_musicAudio || !_musicAudio.duration) return;
+  const pct = (_musicAudio.currentTime / _musicAudio.duration) * 100;
+  document.getElementById('mp-bar').style.width = pct + '%';
+  document.getElementById('mp-time-cur').textContent = fmtTime(_musicAudio.currentTime);
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s/60);
+  const sec = Math.floor(s%60).toString().padStart(2,'0');
+  return `${m}:${sec}`;
+}
+
+function updateMyRating(val) {
+  document.getElementById('mp-rating-val').textContent = parseFloat(val).toFixed(1);
+  const idx = _lastRoom?.music?.currentIndex ?? 0;
+  socket.emit('music:rate', { trackIndex: idx, rating: parseFloat(val) });
+}
+
+function renderLiveRatings(m) {
+  const idx = m.currentIndex;
+  const ratings = m.ratings?.[idx] || {};
+  const el = document.getElementById('mp-live-ratings');
+  if(!el) return;
+  const players = Object.keys(ratings);
+  if(!players.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">En attente des notes…</div>'; return; }
+  el.innerHTML = players.map(p => {
+    const r = ratings[p];
+    const color = r >= 8 ? 'var(--gold)' : r >= 5 ? 'var(--fg)' : 'var(--muted)';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-size:13px;min-width:90px">${p}</span>
+      <div style="flex:1;height:4px;background:var(--border);border-radius:2px">
+        <div style="height:100%;width:${r*10}%;background:${color};border-radius:2px;transition:width .3s"></div>
+      </div>
+      <span style="font-family:var(--fm);font-size:13px;color:${color};min-width:32px;text-align:right">${r.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderMusicRecap(room) {
+  const m = room.music;
+  const el = document.getElementById('music-recap');
+  if(!el || !m?.tracks) return;
+  el.innerHTML = m.tracks.map((track, i) => {
+    const ratings = m.ratings?.[i] || {};
+    const vals = Object.values(ratings);
+    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+    return `<div style="background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-weight:700;margin-bottom:4px">${track.title} <span style="font-size:11px;color:var(--muted);font-weight:400">— ${track.anime}</span></div>
+      <div style="font-family:var(--fm);font-size:10px;color:var(--cyan);margin-bottom:8px">${track.type} · Moyenne : ${avg}/10</div>
+      ${Object.entries(ratings).map(([p,r]) => `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:2px"><span>${p}</span><span style="color:var(--gold)">${r.toFixed(1)}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
 let _selectedMode = null;
 
 function selectMode(mode) {
   _selectedMode = mode;
   document.getElementById('mode-uc').style.borderColor = mode==='undercover' ? 'var(--gold)' : 'var(--border)';
   document.getElementById('mode-tl').style.borderColor = mode==='tierlist' ? 'var(--cyan)' : 'var(--border)';
+  const musicEl = document.getElementById('mode-music');
+  if(musicEl) musicEl.style.borderColor = mode==='music' ? '#ff6b9d' : 'var(--border)';
   const btn = document.getElementById('mode-confirm-btn');
   btn.style.opacity = '1';
   btn.style.pointerEvents = 'auto';
@@ -993,8 +1258,9 @@ function confirmModeAndCreate() {
   if(_selectedMode === 'undercover') {
     showScreen('s-create');
   } else if(_selectedMode === 'tierlist') {
-    // Create room then immediately start tierlist
     createRoomWithMode('tierlist');
+  } else if(_selectedMode === 'music') {
+    showScreen('s-music-options');
   }
 }
 
