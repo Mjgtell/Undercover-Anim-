@@ -374,6 +374,38 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .vp-join-row{padding:10px 14px;border-top:1px solid var(--border)}
 
 @media(max-width:380px){.hcards{grid-template-columns:1fr}.pgrid{grid-template-columns:1fr 1fr}}
+
+/* ── TIERLIST ── */
+.tl-screen{display:flex;flex-direction:column;gap:12px;padding:16px}
+.tl-anime{font-family:var(--fm);font-size:11px;letter-spacing:.15em;color:var(--cyan);text-align:center;text-transform:uppercase}
+.tl-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
+.tl-chars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:8px 0}
+.tl-char{background:var(--ink2);border:2px solid var(--border);border-radius:10px;overflow:hidden;cursor:grab;user-select:none;transition:transform .15s,border-color .15s;position:relative}
+.tl-char:active{cursor:grabbing;transform:scale(1.05);border-color:var(--gold);z-index:10}
+.tl-char.dragging{opacity:.4;border-color:var(--gold)}
+.tl-char.drag-over{border-color:var(--cyan);transform:scale(1.03)}
+.tl-char img{width:100%;height:90px;object-fit:cover;object-position:top center;display:block}
+.tl-char-name{font-size:9px;font-family:var(--fm);padding:4px;text-align:center;line-height:1.2;color:var(--fg)}
+.tl-rank{position:absolute;top:4px;left:4px;background:var(--gold);color:#000;font-weight:700;font-size:10px;font-family:var(--fm);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.tl-rank.r1{background:gold;font-size:11px}
+.tl-rank.r2{background:#C0C0C0}
+.tl-rank.r3{background:#CD7F32}
+.tl-submit-area{margin-top:8px}
+.tl-players-grid{display:flex;flex-direction:column;gap:10px}
+.tl-player-card{background:var(--ink2);border:1px solid var(--border);border-radius:12px;padding:12px}
+.tl-player-name{font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--cyan);margin-bottom:8px}
+.tl-mini-list{display:flex;flex-wrap:wrap;gap:4px}
+.tl-mini-char{display:flex;align-items:center;gap:4px;background:var(--ink);border-radius:6px;padding:3px 6px;font-size:11px}
+.tl-mini-rank{font-family:var(--fm);font-size:9px;color:var(--gold);min-width:14px}
+.tl-mini-img{width:20px;height:20px;border-radius:4px;object-fit:cover;object-position:top}
+.tl-vote-card{background:var(--ink2);border:2px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .2s}
+.tl-vote-card:hover{border-color:var(--gold)}
+.tl-vote-card.voted{border-color:var(--cyan)}
+.tl-vote-card.mine{opacity:.5;cursor:not-allowed}
+.tl-scores{display:flex;flex-direction:column;gap:6px}
+.tl-score-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--ink2);border-radius:8px}
+.tl-score-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.tl-score-fill{height:100%;background:var(--gold);border-radius:3px;transition:width .5s}
 </style>
 </head>
 <body>
@@ -493,7 +525,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div id="l-host-ctrl" style="display:none;margin-top:16px">
       <div class="info-box">Minimum 3 joueurs pour lancer.</div>
       <button class="btn btn-outline btn-full" id="l-add-bot" onclick="addBot()" style="margin-bottom:8px;font-size:13px">🤖 AJOUTER UN BOT IA</button>
-      <button class="btn btn-gold btn-full" id="l-start" onclick="hostStart()" disabled>LANCER →</button>
+      <button class="btn btn-gold btn-full" id="l-start" onclick="hostStart()" disabled>UNDERCOVER →</button>
+      <button class="btn btn-outline btn-full" id="l-tierlist" onclick="hostStartTierlist()" style="margin-top:8px;border-color:var(--cyan);color:var(--cyan);font-size:13px" disabled>🏆 TIERLIST →</button>
     </div>
     <div id="l-guest-wait" style="display:none;margin-top:16px;font-family:var(--fm);font-size:12px;color:var(--muted);text-align:center;letter-spacing:.1em">En attente que l'hôte lance…</div>
     <div class="btn-row" style="margin-top:20px"><button class="btn btn-outline" onclick="leaveRoom()">Quitter</button></div>
@@ -637,6 +670,54 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 </div>
 
 <!-- ════ COUNTDOWN ════ -->
+<!-- TIERLIST RANKING SCREEN -->
+<div id="s-tierlist-ranking" class="screen" style="overflow-y:auto">
+  <div class="tl-screen">
+    <div class="tl-anime" id="tl-anime-label"></div>
+    <div class="tl-title" id="tl-anime-title"></div>
+    <div style="font-size:12px;color:var(--muted);text-align:center">Glisse les persos pour faire ton top 10 — #1 = ton préféré</div>
+    <div class="tl-chars" id="tl-chars-grid"></div>
+    <div class="tl-submit-area">
+      <div id="tl-waiting-msg" style="text-align:center;font-family:var(--fm);font-size:11px;color:var(--cyan);display:none">✅ Classement envoyé — en attente des autres…</div>
+      <button class="btn btn-gold btn-full" id="tl-submit-btn" onclick="submitTierlist()">VALIDER MON TOP 10 →</button>
+    </div>
+    <div id="tl-submitted-list" style="font-size:11px;color:var(--muted);text-align:center;font-family:var(--fm)"></div>
+  </div>
+</div>
+
+<!-- TIERLIST REVEAL SCREEN -->
+<div id="s-tierlist-reveal" class="screen" style="overflow-y:auto">
+  <div class="tl-screen">
+    <div class="tl-anime" id="tl-reveal-label"></div>
+    <div class="tl-title">Les classements !</div>
+    <div class="tl-players-grid" id="tl-reveal-grid"></div>
+    <div style="margin-top:12px" id="tl-open-vote-area">
+      <button class="btn btn-gold btn-full" id="tl-vote-btn" onclick="socket.emit('tierlist:openVote')" style="display:none">LANCER LE VOTE →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIERLIST VOTE SCREEN -->
+<div id="s-tierlist-vote" class="screen" style="overflow-y:auto">
+  <div class="tl-screen">
+    <div class="tl-title">Vote pour le meilleur classement !</div>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px">Tu ne peux pas voter pour le tien</div>
+    <div class="tl-players-grid" id="tl-vote-grid"></div>
+  </div>
+</div>
+
+<!-- TIERLIST RESULT SCREEN -->
+<div id="s-tierlist-result" class="screen" style="overflow-y:auto">
+  <div class="tl-screen">
+    <div class="tl-title" id="tl-result-winner"></div>
+    <div class="tl-scores" id="tl-scores-list"></div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-gold btn-full" id="tl-next-btn" onclick="socket.emit('tierlist:next')" style="display:none">ROUND SUIVANT →</button>
+      <button class="btn btn-outline btn-full" onclick="socket.emit('tierlist:reset')">RETOUR LOBBY</button>
+    </div>
+  </div>
+</div>
+
 <div id="s-countdown" class="screen" style="justify-content:center;background:var(--ink)">
   <div style="text-align:center;position:relative;z-index:2">
     <div style="font-family:var(--fd);font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:20px;font-family:var(--fm)">DÉBUT DE LA PARTIE</div>
@@ -775,7 +856,14 @@ function handleRoomUpdate(room){
   const gameScreens=['s-lobby','s-reveal','s-waiting','s-playing','s-spectator','s-result'];
   if(gameScreens.includes(cur)) voiceShowBtn(true);
   if(_isSpectator){renderSpectator(room);if(cur!=='s-spectator')showScreen('s-spectator');return;}
-  if(room.phase==='lobby'){renderLobby(room);if(cur!=='s-lobby')showScreen('s-lobby');clearClientTimer();}
+  if(room.phase==='tierlist'){
+    _tlVoted=!!room.tierlist?.votes?.[S.name];
+    handleTierlistUpdate(room);
+  } else if(room.phase==='lobby'){
+    // Reset tierlist state when returning to lobby
+    _tlSubmitted=false; _tlVoted=false; _tlRanking=[];
+    renderLobby(room);if(cur!=='s-lobby')showScreen('s-lobby');clearClientTimer();
+  }
   if(room.phase==='reveal'){
     clearClientTimer();
     if(cur!=='s-reveal'&&cur!=='s-waiting'){S.cardFlipped=false;S.subPhase='words';_myVote=null;document.getElementById('the-card').classList.remove('flipped');document.getElementById('rv-done').style.display='none';document.getElementById('rv-tap').style.display='block';document.getElementById('rv-name-label').textContent=(S.name||'').toUpperCase();showScreen('s-reveal');}
@@ -831,7 +919,7 @@ function renderLobby(room){
     const p=room.players[n];const isBot=p.isBot||false;
     return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
   }).join('');
-  if(S.isHost)document.getElementById('l-start').disabled=names.filter(n=>room.players[n].connected).length<3;
+  if(S.isHost){const cn=names.filter(n=>room.players[n].connected).length;document.getElementById('l-start').disabled=cn<3;const tlBtn=document.getElementById('l-tierlist');if(tlBtn)tlBtn.disabled=cn<2;}
   const scores=room.scores||{};const hasScores=names.some(n=>(scores[n]?.wins||0)>0);
   const ss=document.getElementById('scores-section');
   if(hasScores){ss.style.display='block';const sorted=[...names].sort((a,b)=>(scores[b]?.wins||0)-(scores[a]?.wins||0));document.getElementById('scores-list').innerHTML=sorted.map(n=>`<div class="score-row"><span class="score-name">${n}</span><span class="score-val">${scores[n]?.wins||0} pt${(scores[n]?.wins||0)>1?'s':''}</span></div>`).join('');}
@@ -1103,6 +1191,186 @@ const STUN = { iceServers: [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ]};
+
+
+// ══════════════════════════════════════
+//  TIERLIST MODE
+// ══════════════════════════════════════
+
+let _tlRanking = []; // current drag order
+let _tlSubmitted = false;
+let _tlVoted = false;
+
+function hostStartTierlist() {
+  if(!S.isHost) return;
+  socket.emit('tierlist:start');
+}
+
+function renderTierlistRanking(room) {
+  const tl = room.tierlist;
+  if(!tl || !tl.characters) return;
+  document.getElementById('tl-anime-label').textContent = 'TIERLIST';
+  document.getElementById('tl-anime-title').textContent = tl.anime?.title || '';
+
+  // Init ranking order if needed
+  if(_tlRanking.length !== tl.characters.length) {
+    _tlRanking = tl.characters.map(c => c.name);
+  }
+
+  const grid = document.getElementById('tl-chars-grid');
+  grid.innerHTML = '';
+  _tlRanking.forEach((name, i) => {
+    const char = tl.characters.find(c => c.name === name) || {name, image:null};
+    const div = document.createElement('div');
+    div.className = 'tl-char';
+    div.draggable = !_tlSubmitted;
+    div.dataset.name = name;
+    const rankClass = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    div.innerHTML = `
+      <div class="tl-rank ${rankClass}">${i+1}</div>
+      ${char.image ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(char.image)}" onerror="this.style.display='none'">` : ''}
+      <div class="tl-char-name">${name}</div>
+    `;
+    if(!_tlSubmitted) {
+      div.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', name); div.classList.add('dragging'); });
+      div.addEventListener('dragend', () => div.classList.remove('dragging'));
+      div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+      div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+      div.addEventListener('drop', e => {
+        e.preventDefault();
+        div.classList.remove('drag-over');
+        const from = e.dataTransfer.getData('text/plain');
+        const to = name;
+        if(from === to) return;
+        const fi = _tlRanking.indexOf(from);
+        const ti = _tlRanking.indexOf(to);
+        _tlRanking.splice(fi, 1);
+        _tlRanking.splice(ti, 0, from);
+        renderTierlistRanking(room);
+      });
+    }
+    grid.appendChild(div);
+  });
+
+  // Show who submitted
+  const subs = Object.keys(tl.submissions || {}).filter(k => tl.submissions[k]);
+  const total = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator).length;
+  document.getElementById('tl-submitted-list').textContent = subs.length > 0 ? `${subs.length}/${total} ont validé` : '';
+
+  const btn = document.getElementById('tl-submit-btn');
+  const msg = document.getElementById('tl-waiting-msg');
+  if(_tlSubmitted) { btn.style.display='none'; msg.style.display='block'; }
+  else { btn.style.display='block'; msg.style.display='none'; }
+}
+
+function submitTierlist() {
+  if(_tlSubmitted || _tlRanking.length !== 10) return;
+  socket.emit('tierlist:submit', { ranking: _tlRanking });
+  _tlSubmitted = true;
+  const btn = document.getElementById('tl-submit-btn');
+  const msg = document.getElementById('tl-waiting-msg');
+  btn.style.display = 'none';
+  msg.style.display = 'block';
+  beep(660, 0.15); vibe(50);
+}
+
+function renderTierlistReveal(room) {
+  const tl = room.tierlist;
+  document.getElementById('tl-reveal-label').textContent = tl.anime?.title || '';
+  const grid = document.getElementById('tl-reveal-grid');
+  grid.innerHTML = '';
+  Object.entries(tl.submissions || {}).forEach(([player, ranking]) => {
+    const card = document.createElement('div');
+    card.className = 'tl-player-card';
+    const isMe = player === S.name;
+    card.innerHTML = `<div class="tl-player-name">${EMOJIS[Object.keys(room.players).indexOf(player) % EMOJIS.length]} ${player}${isMe?' (toi)':''}</div>
+    <div class="tl-mini-list">${ranking.map((name,i) => {
+      const char = tl.characters.find(c => c.name === name);
+      return `<div class="tl-mini-char">
+        <span class="tl-mini-rank">#${i+1}</span>
+        ${char?.image ? `<img class="tl-mini-img" src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(char.image)}" onerror="this.style.display='none'">` : ''}
+        <span style="font-size:11px">${name}</span>
+      </div>`;
+    }).join('')}</div>`;
+    grid.appendChild(card);
+  });
+  const voteBtn = document.getElementById('tl-vote-btn');
+  if(voteBtn) voteBtn.style.display = S.isHost ? 'block' : 'none';
+}
+
+function renderTierlistVote(room) {
+  const tl = room.tierlist;
+  const grid = document.getElementById('tl-vote-grid');
+  grid.innerHTML = '';
+  Object.entries(tl.submissions || {}).forEach(([player, ranking]) => {
+    const isMe = player === S.name;
+    const hasVoted = tl.votes && tl.votes[S.name];
+    const card = document.createElement('div');
+    card.className = `tl-vote-card${isMe?' mine':''}${tl.votes?.[S.name]===player?' voted':''}`;
+    card.innerHTML = `<div class="tl-player-name">${player}${isMe?' (toi — tu ne peux pas voter)':''}</div>
+    <div class="tl-mini-list">${ranking.slice(0,5).map((name,i) => `<div class="tl-mini-char"><span class="tl-mini-rank">#${i+1}</span><span style="font-size:11px">${name}</span></div>`).join('')}<span style="font-size:10px;color:var(--muted);margin-left:4px">+5 autres</span></div>`;
+    if(!isMe && !hasVoted) {
+      card.onclick = () => {
+        if(_tlVoted) return;
+        _tlVoted = true;
+        socket.emit('tierlist:vote', { target: player });
+        beep(880, 0.15); vibe(60);
+      };
+    }
+    grid.appendChild(card);
+  });
+}
+
+function renderTierlistResult(room) {
+  const tl = room.tierlist;
+  const winners = tl.winner || [];
+  document.getElementById('tl-result-winner').textContent = winners.length === 1
+    ? `🏆 ${winners[0]} remporte ce round !`
+    : `🤝 Égalité entre ${winners.join(' & ')} !`;
+
+  const scoreList = document.getElementById('tl-scores-list');
+  const maxScore = Math.max(...Object.values(tl.scores || {}), 1);
+  scoreList.innerHTML = Object.entries(tl.scores || {})
+    .sort(([,a],[,b]) => b-a)
+    .map(([p, s]) => `<div class="tl-score-row">
+      <span style="min-width:100px;font-size:13px">${p}</span>
+      <div class="tl-score-bar"><div class="tl-score-fill" style="width:${(s/10)*100}%"></div></div>
+      <span style="font-family:var(--fm);font-size:12px;color:var(--gold)">${s}/10</span>
+    </div>`).join('');
+
+  const nextBtn = document.getElementById('tl-next-btn');
+  if(nextBtn) nextBtn.style.display = S.isHost ? 'block' : 'none';
+}
+
+// Handle tierlist room updates
+function handleTierlistUpdate(room) {
+  const tl = room.tierlist;
+  if(!tl) return;
+  switch(tl.phase) {
+    case 'ranking':
+      showScreen('s-tierlist-ranking');
+      renderTierlistRanking(room);
+      break;
+    case 'reveal':
+      showScreen('s-tierlist-reveal');
+      renderTierlistReveal(room);
+      break;
+    case 'vote':
+      showScreen('s-tierlist-vote');
+      renderTierlistVote(room);
+      break;
+    case 'result':
+      showScreen('s-tierlist-result');
+      renderTierlistResult(room);
+      break;
+    case 'champion':
+      showScreen('s-tierlist-result');
+      renderTierlistResult(room);
+      document.getElementById('tl-result-winner').textContent = `👑 ${tl.winner?.[0]} a atteint 10 points — CHAMPION !`;
+      if(document.getElementById('tl-next-btn')) document.getElementById('tl-next-btn').style.display='none';
+      break;
+  }
+}
 
 const Voice = {
   active: false,         // joined voice?
