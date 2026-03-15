@@ -546,9 +546,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center">
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">
         <button onclick="playSegment('intro')" class="btn btn-outline" style="font-size:11px;padding:6px 12px">▶ Début (10s)</button>
         <button onclick="playSegment('chorus')" class="btn btn-outline" style="font-size:11px;padding:6px 12px">▶ Refrain (1min)</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:14px">🔈</span>
+        <input type="range" id="mp-volume" min="0" max="1" step="0.05" value="0.8"
+          style="flex:1;accent-color:var(--gold)"
+          oninput="if(_musicAudio)_musicAudio.volume=this.value">
+        <span style="font-size:14px">🔊</span>
       </div>
     </div>
     <!-- Rating -->
@@ -1137,14 +1144,20 @@ function handleMusicUpdate(room) {
 function loadAudio(url) {
   if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
   if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
-  _musicAudio = new Audio(url);
-  _musicAudio.crossOrigin = 'anonymous';
+  const proxyUrl = `https://undercover-backend-4st4.onrender.com/audio?url=${encodeURIComponent(url)}`;
+  _musicAudio = new Audio(proxyUrl);
+  _musicAudio.volume = parseFloat(document.getElementById('mp-volume')?.value ?? 1);
   _musicAudio.addEventListener('timeupdate', updateAudioBar);
   _musicAudio.addEventListener('loadedmetadata', () => {
     document.getElementById('mp-time-tot').textContent = fmtTime(_musicAudio.duration);
   });
+  _musicAudio.addEventListener('error', (e) => {
+    toast('Erreur chargement audio — essaie une autre musique', 'err');
+    console.error('Audio error:', e);
+  });
   document.getElementById('mp-play-btn').textContent = '▶';
   document.getElementById('mp-bar').style.width = '0%';
+  document.getElementById('mp-time-cur').textContent = '0:00';
 }
 
 function togglePlay() {
