@@ -1319,6 +1319,7 @@ function handleMusicUpdate(room) {
   document.getElementById('mp-anime-name').textContent = track.anime;
   document.getElementById('mp-host-controls').style.display = S.isHost ? 'block' : 'none';
   // Load audio if track changed
+  console.log('Current track:', track);
   if(!_musicCurrentTrack || _musicCurrentTrack.id !== track.id) {
     _musicCurrentTrack = track;
     loadAudio(track.audioUrl);
@@ -1331,6 +1332,8 @@ function handleMusicUpdate(room) {
 }
 
 function loadAudio(url) {
+  console.log('loadAudio called with url:', url);
+  if(!url) { toast('URL audio manquante', 'err'); return; }
   if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
   if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
   // Try direct URL first, fallback to proxy
