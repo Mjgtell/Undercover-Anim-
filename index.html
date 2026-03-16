@@ -1098,13 +1098,9 @@ function renderLobby(room){ _lastRoom=room;
   const badge=document.getElementById('l-mode-badge');
   if(badge){badge.textContent=room.mode==='music'?'🎵 MODE MUSIC RATING':room.mode==='freetl'?'🌀 FREE TIERLIST':room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
   // Auto-start music if host just created a music room
-  if(room.mode==='freetl' && S.isHost && room.phase==='lobby'){
-    socket.emit('freetl:start');
-  }
-  if(room.mode==='music' && S.isHost && window._pendingMusicSettings && room.phase==='lobby'){
-    const settings = window._pendingMusicSettings;
-    window._pendingMusicSettings = null;
-    setTimeout(()=>socket.emit('music:start', settings), 500);
+  if(room.mode==='freetl' && S.isHost && room.phase==='lobby' && !_freetlAutoStarted){
+    _freetlAutoStarted = true;
+    // Don't auto-start — wait for host to click LANCER
   }
   document.getElementById('l-players').innerHTML=names.map((n,i)=>{
     const p=room.players[n];const isBot=p.isBot||false;
@@ -1485,10 +1481,17 @@ function hostStart(){
 }
 function hostStartAuto() {
   if(!S.isHost) return;
-  // Check room mode from server
   const room = _lastRoom;
-  if(room && room.mode === 'tierlist') {
+  if(!room) return;
+  if(room.mode === 'tierlist') {
     hostStartTierlist();
+  } else if(room.mode === 'freetl') {
+    socket.emit('freetl:start');
+  } else if(room.mode === 'music') {
+    if(window._pendingMusicSettings) {
+      socket.emit('music:start', window._pendingMusicSettings);
+      window._pendingMusicSettings = null;
+    }
   } else {
     hostStart();
   }
