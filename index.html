@@ -481,6 +481,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <div style="font-weight:700;font-size:16px;margin-bottom:4px">TIERLIST</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.5">Classe 10 persos d'un animé aléatoire. Le meilleur classement gagne le vote. Premier à 10 points gagne.</div>
       </div>
+      <div onclick="selectMode('freetl')" id="mode-freetl" style="background:var(--ink2);border:2px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:border-color .2s">
+        <div style="font-size:22px;margin-bottom:6px">🌀</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">FREE TIERLIST</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">10 persos random de tous les animés. Classe, révèle, débat. Enchaîne les rounds sans retourner au lobby.</div>
+      </div>
       <div onclick="selectMode('music')" id="mode-music" style="background:var(--ink2);border:2px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:border-color .2s">
         <div style="font-size:22px;margin-bottom:6px">🎵</div>
         <div style="font-weight:700;font-size:16px;margin-bottom:4px">MUSIC RATING</div>
@@ -488,6 +493,36 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       </div>
     </div>
     <button class="btn btn-red btn-full" id="mode-confirm-btn" style="margin-top:20px;opacity:.4;pointer-events:none" onclick="confirmModeAndCreate()">CRÉER LA SALLE →</button>
+  </div>
+</div>
+
+<!-- ════ FREE TIERLIST RANKING ════ -->
+<div id="s-freetl-ranking" class="screen" style="overflow-y:auto">
+  <div class="tl-screen">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="tl-anime" id="freetl-round-label"></div>
+      <div id="freetl-submitted-count" style="font-family:var(--fm);font-size:10px;color:var(--muted)"></div>
+    </div>
+    <div class="tl-title">Classe ces 10 persos !</div>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px">Glisse pour réordonner — #1 = ton préféré</div>
+    <div class="tl-chars" id="freetl-chars-grid"></div>
+    <div style="margin-top:12px">
+      <div id="freetl-waiting-msg" style="text-align:center;font-family:var(--fm);font-size:11px;color:var(--cyan);display:none">✅ Envoyé — en attente des autres…</div>
+      <button class="btn btn-gold btn-full" id="freetl-submit-btn" onclick="submitFreeTierlist()">VALIDER →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ FREE TIERLIST REVEAL ════ -->
+<div id="s-freetl-reveal" class="screen" style="overflow-y:auto">
+  <div class="tl-screen">
+    <div class="tl-anime" id="freetl-reveal-round"></div>
+    <div class="tl-title">Les classements !</div>
+    <div class="tl-players-grid" id="freetl-reveal-grid"></div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-gold btn-full" id="freetl-next-btn" onclick="socket.emit('freetl:next')" style="display:none">ROUND SUIVANT →</button>
+      <button class="btn btn-outline" onclick="socket.emit('freetl:reset')" style="flex:1">LOBBY</button>
+    </div>
   </div>
 </div>
 
@@ -992,6 +1027,16 @@ function handleRoomUpdate(room){
   if(room.phase==='tierlist'){
     _tlVoted=!!room.tierlist?.votes?.[S.name];
     handleTierlistUpdate(room);
+  } else if(room.phase==='freetl'){
+    if(!room.freetl) return;
+    const ftCharsKey = room.freetl.characters.map(c=>c.name).join(',');
+    if(room.freetl.phase==='ranking'&&_ftlRanking.join(',')!==ftCharsKey){
+      _ftlRanking=room.freetl.characters.map(c=>c.name);
+      _ftlSubmitted=false;
+    } else if(room.freetl.phase==='ranking'){
+      _ftlSubmitted=!!room.freetl.submissions[S.name];
+    }
+    handleFreeTlUpdate(room);
   } else if(room.phase==='music'){
     handleMusicUpdate(room);
   } else if(room.phase==='lobby'){
@@ -1051,8 +1096,11 @@ function renderLobby(room){ _lastRoom=room;
   document.getElementById('l-guest-wait').style.display=S.isHost?'none':'block';
   const names=Object.keys(room.players).filter(n=>!room.players[n].isSpectator);
   const badge=document.getElementById('l-mode-badge');
-  if(badge){badge.textContent=room.mode==='music'?'🎵 MODE MUSIC RATING':room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
+  if(badge){badge.textContent=room.mode==='music'?'🎵 MODE MUSIC RATING':room.mode==='freetl'?'🌀 FREE TIERLIST':room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
   // Auto-start music if host just created a music room
+  if(room.mode==='freetl' && S.isHost && room.phase==='lobby'){
+    socket.emit('freetl:start');
+  }
   if(room.mode==='music' && S.isHost && window._pendingMusicSettings && room.phase==='lobby'){
     const settings = window._pendingMusicSettings;
     window._pendingMusicSettings = null;
@@ -1092,6 +1140,134 @@ function joinAsSpectator(){
   _isSpectator=true;
   socket.emit('room:join',{name:_pendingSpec.name,code:_pendingSpec.code,asSpectator:true});
 }
+// ══════════════════════════════════════
+//  FREE TIERLIST MODE
+// ══════════════════════════════════════
+let _ftlRanking = [];
+let _ftlSubmitted = false;
+
+function handleFreeTlUpdate(room) {
+  const ft = room.freetl;
+  if (!ft) return;
+  if (ft.phase === 'ranking') {
+    showScreen('s-freetl-ranking');
+    // Init ranking if new round
+    if (_ftlRanking.length !== ft.characters.length) {
+      _ftlRanking = ft.characters.map(c => c.name);
+      _ftlSubmitted = !!ft.submissions[S.name];
+    }
+    renderFreeTlRanking(room);
+  } else if (ft.phase === 'reveal') {
+    showScreen('s-freetl-reveal');
+    renderFreeTlReveal(room);
+  }
+}
+
+function renderFreeTlRanking(room) {
+  const ft = room.freetl;
+  document.getElementById('freetl-round-label').textContent = `ROUND ${ft.round}`;
+  const players = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator);
+  const subCount = Object.keys(ft.submissions).length;
+  document.getElementById('freetl-submitted-count').textContent = `${subCount}/${players.length} prêts`;
+
+  const grid = document.getElementById('freetl-chars-grid');
+  grid.innerHTML = '';
+  _ftlRanking.forEach((name, i) => {
+    const char = ft.characters.find(c => c.name === name) || {name, anime:''};
+    const div = document.createElement('div');
+    div.className = 'tl-char';
+    div.draggable = !_ftlSubmitted;
+    div.dataset.name = name;
+    const rankClass = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    const img = CHARACTER_IMAGES_CLIENT[name];
+    div.innerHTML = `
+      <div class="tl-rank ${rankClass}">${i+1}</div>
+      ${img ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(img)}" onerror="this.style.display='none'" style="width:100%;height:80px;object-fit:cover;object-position:top">` : `<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:22px">🎭</div>`}
+      <div class="tl-char-name">${name}<div style="font-size:8px;color:var(--muted)">${char.anime||''}</div></div>
+    `;
+    if (!_ftlSubmitted) {
+      div.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', name); div.classList.add('dragging'); });
+      div.addEventListener('dragend', () => div.classList.remove('dragging'));
+      div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+      div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+      div.addEventListener('drop', e => {
+        e.preventDefault(); div.classList.remove('drag-over');
+        const from = e.dataTransfer.getData('text/plain');
+        if (from === name) return;
+        const fi = _ftlRanking.indexOf(from), ti = _ftlRanking.indexOf(name);
+        _ftlRanking.splice(fi, 1); _ftlRanking.splice(ti, 0, from);
+        renderFreeTlRanking(room);
+      });
+    }
+    grid.appendChild(div);
+  });
+
+  const btn = document.getElementById('freetl-submit-btn');
+  const msg = document.getElementById('freetl-waiting-msg');
+  if (_ftlSubmitted) { btn.style.display='none'; msg.style.display='block'; }
+  else { btn.style.display='block'; msg.style.display='none'; }
+}
+
+function submitFreeTierlist() {
+  if (_ftlSubmitted || _ftlRanking.length !== 10) return;
+  socket.emit('freetl:submit', { ranking: _ftlRanking });
+  _ftlSubmitted = true;
+  document.getElementById('freetl-submit-btn').style.display = 'none';
+  document.getElementById('freetl-waiting-msg').style.display = 'block';
+  beep(660, 0.15); vibe(50);
+}
+
+function renderFreeTlReveal(room) {
+  const ft = room.freetl;
+  document.getElementById('freetl-reveal-round').textContent = `ROUND ${ft.round}`;
+  const grid = document.getElementById('freetl-reveal-grid');
+  const playerNames = Object.keys(room.players);
+  grid.innerHTML = Object.entries(ft.submissions).map(([player, ranking]) => {
+    const isMe = player === S.name;
+    return `<div class="tl-player-card">
+      <div class="tl-player-name">${EMOJIS[playerNames.indexOf(player) % EMOJIS.length]} ${player}${isMe?' (toi)':''}</div>
+      <div class="tl-mini-list">${ranking.map((name, i) => {
+        const char = ft.characters.find(c => c.name === name);
+        return `<div class="tl-mini-char">
+          <span class="tl-mini-rank">#${i+1}</span>
+          <span style="font-size:11px">${name}</span>
+          ${char ? `<span style="font-size:9px;color:var(--muted)">${char.anime}</span>` : ''}
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+  const nextBtn = document.getElementById('freetl-next-btn');
+  if (nextBtn) nextBtn.style.display = S.isHost ? 'block' : 'none';
+}
+
+// Small client-side image map for free tierlist
+const CHARACTER_IMAGES_CLIENT = {
+  'Naruto Uzumaki':'https://cdn.myanimelist.net/images/characters/2/284121.jpg',
+  'Sasuke Uchiha':'https://cdn.myanimelist.net/images/characters/9/131317.jpg',
+  'Itachi Uchiha':'https://cdn.myanimelist.net/images/characters/15/72554.jpg',
+  'Kakashi Hatake':'https://cdn.myanimelist.net/images/characters/7/284122.jpg',
+  'Levi Ackerman':'https://cdn.myanimelist.net/images/characters/2/241413.jpg',
+  'Eren Yeager':'https://cdn.myanimelist.net/images/characters/10/108914.jpg',
+  'Mikasa Ackerman':'https://cdn.myanimelist.net/images/characters/9/108913.jpg',
+  'Monkey D. Luffy':'https://cdn.myanimelist.net/images/characters/9/310307.jpg',
+  'Zoro':'https://cdn.myanimelist.net/images/characters/3/100534.jpg',
+  'Izuku Midoriya':'https://cdn.myanimelist.net/images/characters/5/312676.jpg',
+  'Gojo Satoru':'https://cdn.myanimelist.net/images/characters/8/450358.jpg',
+  'Tanjiro Kamado':'https://cdn.myanimelist.net/images/characters/3/418268.jpg',
+  'Killua Zoldyck':'https://cdn.myanimelist.net/images/characters/7/171471.jpg',
+  'Gon Freecss':'https://cdn.myanimelist.net/images/characters/11/174517.jpg',
+  'L Lawliet':'https://cdn.myanimelist.net/images/characters/8/261785.jpg',
+  'Light Yagami':'https://cdn.myanimelist.net/images/characters/9/261784.jpg',
+  'Saitama':'https://cdn.myanimelist.net/images/characters/11/207828.jpg',
+  'Guts':'https://cdn.myanimelist.net/images/characters/2/74908.jpg',
+  'Griffith':'https://cdn.myanimelist.net/images/characters/2/74907.jpg',
+  'Lelouch vi Britannia':'https://cdn.myanimelist.net/images/characters/8/76655.jpg',
+  'Rem':'https://cdn.myanimelist.net/images/characters/13/321079.jpg',
+  'Yuji Itadori':'https://cdn.myanimelist.net/images/characters/8/448083.jpg',
+  'Denji':'https://cdn.myanimelist.net/images/characters/10/471020.jpg',
+  'Edward Elric':'https://cdn.myanimelist.net/images/characters/11/174118.jpg',
+};
+
 // ══════════════════════════════════════
 //  MUSIC RATING MODE
 // ══════════════════════════════════════
@@ -1263,6 +1439,8 @@ function selectMode(mode) {
   _selectedMode = mode;
   document.getElementById('mode-uc').style.borderColor = mode==='undercover' ? 'var(--gold)' : 'var(--border)';
   document.getElementById('mode-tl').style.borderColor = mode==='tierlist' ? 'var(--cyan)' : 'var(--border)';
+  const freetlEl = document.getElementById('mode-freetl');
+  if(freetlEl) freetlEl.style.borderColor = mode==='freetl' ? 'var(--cyan)' : 'var(--border)';
   const musicEl = document.getElementById('mode-music');
   if(musicEl) musicEl.style.borderColor = mode==='music' ? '#ff6b9d' : 'var(--border)';
   const btn = document.getElementById('mode-confirm-btn');
@@ -1278,6 +1456,8 @@ function confirmModeAndCreate() {
     showScreen('s-create');
   } else if(_selectedMode === 'tierlist') {
     createRoomWithMode('tierlist');
+  } else if(_selectedMode === 'freetl') {
+    createRoomWithMode('freetl');
   } else if(_selectedMode === 'music') {
     showScreen('s-music-options');
   }
