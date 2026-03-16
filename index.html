@@ -1333,7 +1333,8 @@ function handleMusicUpdate(room) {
 function loadAudio(url) {
   if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
   if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
-  const proxyUrl = `https://undercover-backend-4st4.onrender.com/audio?url=${encodeURIComponent(url)}`;
+  // Try direct URL first, fallback to proxy
+  const proxyUrl = url; // direct from v.animethemes.moe
   _musicAudio = new Audio(proxyUrl);
   _musicAudio.volume = parseFloat(document.getElementById('mp-volume')?.value ?? 1);
   _musicAudio.addEventListener('timeupdate', updateAudioBar);
