@@ -379,14 +379,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .tl-screen{display:flex;flex-direction:column;gap:12px;padding:16px}
 .tl-anime{font-family:var(--fm);font-size:11px;letter-spacing:.15em;color:var(--cyan);text-align:center;text-transform:uppercase}
 .tl-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
-.tl-chars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:8px 0}
+.tl-chars{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:8px 0}
 .tl-char{background:var(--ink2);border:2px solid var(--border);border-radius:10px;overflow:hidden;cursor:grab;user-select:none;transition:transform .15s,border-color .15s;position:relative}
 .tl-char:active{cursor:grabbing;transform:scale(1.05);border-color:var(--gold);z-index:10}
 .tl-char.dragging{opacity:.4;border-color:var(--gold)}
 .tl-char.drag-over{border-color:var(--cyan);transform:scale(1.03)}
-.tl-char img{width:100%;height:90px;object-fit:cover;object-position:top center;display:block}
-.tl-char-name{font-size:9px;font-family:var(--fm);padding:4px;text-align:center;line-height:1.2;color:var(--fg)}
-.tl-rank{position:absolute;top:4px;left:4px;background:var(--gold);color:#000;font-weight:700;font-size:10px;font-family:var(--fm);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.tl-char img{width:100%;height:120px;object-fit:cover;object-position:top center;display:block}
+.tl-char-name{font-size:10px;font-family:var(--fm);padding:5px 4px;text-align:center;line-height:1.3;color:var(--fg)}
+.tl-rank{position:absolute;top:4px;left:4px;background:var(--gold);color:#000;font-weight:700;font-size:11px;font-family:var(--fm);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .tl-rank.r1{background:gold;font-size:11px}
 .tl-rank.r2{background:#C0C0C0}
 .tl-rank.r3{background:#CD7F32}
@@ -1196,7 +1196,9 @@ function renderFreeTlRanking(room) {
         const from = e.dataTransfer.getData('text/plain');
         if (from === name) return;
         const fi = _ftlRanking.indexOf(from), ti = _ftlRanking.indexOf(name);
-        _ftlRanking.splice(fi, 1); _ftlRanking.splice(ti, 0, from);
+        // Swap the two positions instead of shifting
+        _ftlRanking[fi] = name;
+        _ftlRanking[ti] = from;
         renderFreeTlRanking(room);
       });
     }
@@ -1791,8 +1793,8 @@ function renderTierlistRanking(room) {
         if(from === to) return;
         const fi = _tlRanking.indexOf(from);
         const ti = _tlRanking.indexOf(to);
-        _tlRanking.splice(fi, 1);
-        _tlRanking.splice(ti, 0, from);
+        _tlRanking[fi] = to;
+        _tlRanking[ti] = from;
         renderTierlistRanking(room);
       });
     }
