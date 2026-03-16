@@ -1501,10 +1501,9 @@ function hostStartAuto() {
     console.log('freetl:start emitted, S.code=', S.code, 'room=', room);
     socket.emit('freetl:start');
   } else if(room.mode === 'music') {
-    if(window._pendingMusicSettings) {
-      socket.emit('music:start', window._pendingMusicSettings);
-      window._pendingMusicSettings = null;
-    }
+    const settings = window._pendingMusicSettings || { type: 'both', count: 8, pool: 'top' };
+    window._pendingMusicSettings = null;
+    socket.emit('music:start', settings);
   } else {
     hostStart();
   }
