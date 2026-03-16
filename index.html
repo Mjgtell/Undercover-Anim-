@@ -1338,7 +1338,8 @@ function loadAudio(url) {
   if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
   if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
   const proxyUrl = `https://undercover-backend-4st4.onrender.com/audio?url=${encodeURIComponent(url)}`;
-  _musicAudio = new Audio(proxyUrl);
+  _musicAudio = new Audio();
+  _musicAudio.src = proxyUrl;
   _musicAudio.volume = parseFloat(document.getElementById('mp-volume')?.value ?? 1);
   _musicAudio.addEventListener('timeupdate', updateAudioBar);
   _musicAudio.addEventListener('loadedmetadata', () => {
