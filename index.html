@@ -1180,7 +1180,7 @@ function renderFreeTlRanking(room) {
     div.draggable = !_ftlSubmitted;
     div.dataset.name = name;
     const rankClass = i===0?'r1':i===1?'r2':i===2?'r3':'';
-    const img = CHARACTER_IMAGES_CLIENT[name];
+    const img = char?.image || null;
     div.innerHTML = `
       <div class="tl-rank ${rankClass}">${i+1}</div>
       ${img ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(img)}" onerror="this.style.display='none'" style="width:100%;height:80px;object-fit:cover;object-position:top">` : `<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:22px">🎭</div>`}
