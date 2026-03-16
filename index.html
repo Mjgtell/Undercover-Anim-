@@ -1062,7 +1062,7 @@ function renderLobby(room){ _lastRoom=room;
     const p=room.players[n];const isBot=p.isBot||false;
     return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
   }).join('');
-  if(S.isHost){const cn=names.filter(n=>room.players[n].connected).length;const minPlayers=(_lastRoom?.mode==='undercover')?3:2;document.getElementById('l-start').disabled=cn<minPlayers;}
+  if(S.isHost){const cn=names.filter(n=>room.players[n].connected).length;const minPlayers=(room.mode==='undercover'||!room.mode)?3:2;document.getElementById('l-start').disabled=cn<minPlayers;}
   const scores=room.scores||{};const hasScores=names.some(n=>(scores[n]?.wins||0)>0);
   const ss=document.getElementById('scores-section');
   if(hasScores){ss.style.display='block';const sorted=[...names].sort((a,b)=>(scores[b]?.wins||0)-(scores[a]?.wins||0));document.getElementById('scores-list').innerHTML=sorted.map(n=>`<div class="score-row"><span class="score-name">${n}</span><span class="score-val">${scores[n]?.wins||0} pt${(scores[n]?.wins||0)>1?'s':''}</span></div>`).join('');}
