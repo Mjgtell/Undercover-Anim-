@@ -1306,6 +1306,7 @@ function createRoomMusic() {
 
 function handleMusicUpdate(room) {
   const m = room.music;
+  console.log('handleMusicUpdate phase:', m?.phase, 'tracks:', m?.tracks?.length, 'idx:', m?.currentIndex, 'audioUrl:', m?.tracks?.[m?.currentIndex]?.audioUrl);
   if(!m) return;
   if(m.phase === 'done') { showScreen('s-music-done'); renderMusicRecap(room); return; }
   if(m.phase !== 'playing') return;
