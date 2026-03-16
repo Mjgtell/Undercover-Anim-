@@ -933,7 +933,7 @@ function initSocket(){
   });
 
   socket.on('loading',on=>setLoading(on));
-  socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);if(window._pendingMusicSettings&&isHost){setTimeout(()=>{socket.emit('music:start',window._pendingMusicSettings);window._pendingMusicSettings=null;},800);};});
+  socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);});
   socket.on('room:promoted',()=>{S.isHost=true;toast("Tu es maintenant l'hôte !",'ok');});
   socket.on('room:update',room=>handleRoomUpdate(room));
   socket.on('spectator:offer',({code,name})=>{_pendingSpec={code,name};setLoading(false);document.getElementById('spec-yes-btn').onclick=()=>joinAsSpectator();showScreen('s-specoffer');});
@@ -1052,6 +1052,12 @@ function renderLobby(room){ _lastRoom=room;
   const names=Object.keys(room.players).filter(n=>!room.players[n].isSpectator);
   const badge=document.getElementById('l-mode-badge');
   if(badge){badge.textContent=room.mode==='music'?'🎵 MODE MUSIC RATING':room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
+  // Auto-start music if host just created a music room
+  if(room.mode==='music' && S.isHost && window._pendingMusicSettings && room.phase==='lobby'){
+    const settings = window._pendingMusicSettings;
+    window._pendingMusicSettings = null;
+    setTimeout(()=>socket.emit('music:start', settings), 500);
+  }
   document.getElementById('l-players').innerHTML=names.map((n,i)=>{
     const p=room.players[n];const isBot=p.isBot||false;
     return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
