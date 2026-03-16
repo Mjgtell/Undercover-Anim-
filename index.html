@@ -1098,10 +1098,7 @@ function renderLobby(room){ _lastRoom=room;
   const badge=document.getElementById('l-mode-badge');
   if(badge){badge.textContent=room.mode==='music'?'🎵 MODE MUSIC RATING':room.mode==='freetl'?'🌀 FREE TIERLIST':room.mode==='tierlist'?'🏆 MODE TIERLIST':'🕵️ MODE UNDERCOVER';}
   // Auto-start music if host just created a music room
-  if(room.mode==='freetl' && S.isHost && room.phase==='lobby' && !_freetlAutoStarted){
-    _freetlAutoStarted = true;
-    // Don't auto-start — wait for host to click LANCER
-  }
+
   document.getElementById('l-players').innerHTML=names.map((n,i)=>{
     const p=room.players[n];const isBot=p.isBot||false;
     return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
@@ -1464,6 +1461,7 @@ function createRoomWithMode(mode) {
   if(!name){toast('Entre ton prénom !','err');return;}
   initSocket();
   setLoading(true,'CRÉATION…');
+  socket.once('room:joined', () => showScreen('s-lobby'));
   socket.emit('room:create',{name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode});
 }
 
