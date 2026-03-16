@@ -1114,11 +1114,11 @@ function createRoomMusic() {
   if(!name){ toast('Entre ton prénom !','err'); return; }
   const type = document.querySelector('#music-type-chips .chip.on')?.dataset.t || 'both';
   const count = parseInt(document.querySelector('#music-count-chips .chip.on')?.dataset.c || '8');
+  window._pendingMusicSettings = { type, count };
   initSocket();
   setLoading(true,'CRÉATION…');
+  socket.once('room:joined', () => showScreen('s-lobby'));
   socket.emit('room:create', { name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode:'music' });
-  // Store settings to emit after joining
-  window._pendingMusicSettings = { type, count };
 }
 
 function handleMusicUpdate(room) {
