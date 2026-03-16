@@ -542,6 +542,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       </div>
     </div>
     <div class="field" style="margin-top:16px">
+      <label>Sélection</label>
+      <div class="chips" id="music-pool-chips">
+        <button class="chip on" data-p="top">🔥 Top populaires</button>
+        <button class="chip" data-p="random">🎲 Full random</button>
+      </div>
+    </div>
+    <div class="field" style="margin-top:16px">
       <label>Nombre de musiques</label>
       <div class="chips" id="music-count-chips">
         <button class="chip" data-c="3">3</button>
@@ -1274,6 +1281,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('#music-type-chips .chip').forEach(b => {
     b.onclick = () => { document.querySelectorAll('#music-type-chips .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
   });
+  document.querySelectorAll('#music-pool-chips .chip').forEach(b => {
+    b.onclick = () => { document.querySelectorAll('#music-pool-chips .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+  });
   document.querySelectorAll('#music-count-chips .chip').forEach(b => {
     b.onclick = () => { document.querySelectorAll('#music-count-chips .chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
   });
@@ -1284,7 +1294,8 @@ function createRoomMusic() {
   if(!name){ toast('Entre ton prénom !','err'); return; }
   const type = document.querySelector('#music-type-chips .chip.on')?.dataset.t || 'both';
   const count = parseInt(document.querySelector('#music-count-chips .chip.on')?.dataset.c || '8');
-  window._pendingMusicSettings = { type, count };
+  const pool = document.querySelector('#music-pool-chips .chip.on')?.dataset.p || 'top';
+  window._pendingMusicSettings = { type, count, pool };
   initSocket();
   setLoading(true,'CRÉATION…');
   socket.once('room:joined', () => showScreen('s-lobby'));
