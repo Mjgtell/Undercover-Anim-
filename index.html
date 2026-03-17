@@ -589,10 +589,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">
-        <button onclick="playSegment('intro')" class="btn btn-outline" style="font-size:11px;padding:6px 12px">▶ Début (10s)</button>
-        <button onclick="playSegment('chorus')" class="btn btn-outline" style="font-size:11px;padding:6px 12px">▶ Refrain (1min)</button>
-      </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:14px">🔈</span>
         <input type="range" id="mp-volume" min="0" max="1" step="0.05" value="0.8"
@@ -1346,8 +1342,9 @@ function loadAudio(url) {
   if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
   const proxyUrl = `https://undercover-backend-4st4.onrender.com/audio?url=${encodeURIComponent(url)}`;
   _musicAudio = new Audio();
+  _musicAudio.preload = 'metadata';
   _musicAudio.src = proxyUrl;
-  _musicAudio.volume = parseFloat(document.getElementById('mp-volume')?.value ?? 1);
+  _musicAudio.volume = parseFloat(document.getElementById('mp-volume')?.value ?? 0.8);
   _musicAudio.addEventListener('timeupdate', updateAudioBar);
   _musicAudio.addEventListener('loadedmetadata', () => {
     document.getElementById('mp-time-tot').textContent = fmtTime(_musicAudio.duration);
@@ -1393,8 +1390,10 @@ function playSegment(seg) {
 function seekAudio(e) {
   if(!_musicAudio || !_musicAudio.duration) return;
   const rect = document.getElementById('mp-bar-wrap').getBoundingClientRect();
-  const pct = (e.clientX - rect.left) / rect.width;
-  _musicAudio.currentTime = pct * _musicAudio.duration;
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const time = pct * _musicAudio.duration;
+  if(_musicAudio.fastSeek) _musicAudio.fastSeek(time);
+  else _musicAudio.currentTime = time;
 }
 
 function updateAudioBar() {
