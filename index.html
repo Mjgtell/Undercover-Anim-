@@ -575,26 +575,18 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div style="font-size:20px;font-weight:700;margin-bottom:4px" id="mp-song-title"></div>
       <div style="font-size:13px;color:var(--muted)" id="mp-anime-name"></div>
     </div>
-    <!-- Audio player -->
-    <div style="background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <button onclick="togglePlay()" id="mp-play-btn" style="width:48px;height:48px;border-radius:50%;background:var(--gold);color:#000;border:none;font-size:20px;cursor:pointer;flex-shrink:0">▶</button>
-        <div style="flex:1">
-          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;cursor:pointer" onclick="seekAudio(event)" id="mp-bar-wrap">
-            <div id="mp-bar" style="height:100%;background:var(--gold);width:0%;transition:width .2s;border-radius:2px"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:4px;font-family:var(--fm);font-size:9px;color:var(--muted)">
-            <span id="mp-time-cur">0:00</span>
-            <span id="mp-time-tot">0:00</span>
-          </div>
-        </div>
+    <!-- YouTube player -->
+    <div style="background:var(--ink2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px">
+      <div id="yt-container" style="position:relative;width:100%;padding-bottom:56.25%;background:#000">
+        <iframe id="yt-iframe"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;border:none"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:14px">🔈</span>
-        <input type="range" id="mp-volume" min="0" max="1" step="0.05" value="0.8"
-          style="flex:1;accent-color:var(--gold)"
-          oninput="if(_musicAudio)_musicAudio.volume=this.value">
-        <span style="font-size:14px">🔊</span>
+      <div id="yt-search-fallback" style="display:none;padding:12px;text-align:center">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Vidéo non disponible en embed</div>
+        <a id="yt-search-link" href="#" target="_blank" class="btn btn-outline" style="font-size:12px;padding:8px 16px">🔍 Rechercher sur YouTube</a>
       </div>
     </div>
     <!-- Rating -->
@@ -1271,8 +1263,8 @@ const CHARACTER_IMAGES_CLIENT = {
 // ══════════════════════════════════════
 //  MUSIC RATING MODE
 // ══════════════════════════════════════
-let _musicAudio = null;
-let _musicSegTimer = null;
+let _musicAudio = null; // kept for compatibility
+
 let _musicCurrentTrack = null;
 
 // Chip selection for music options
@@ -1327,7 +1319,7 @@ function handleMusicUpdate(room) {
   // Load audio if track changed
   if(!_musicCurrentTrack || _musicCurrentTrack.id !== track.id) {
     _musicCurrentTrack = track;
-    loadAudio(track.audioUrl);
+    loadYouTube(track);
     // Reset rating slider
     document.getElementById('mp-rating-slider').value = 5;
     document.getElementById('mp-rating-val').textContent = '5.0';
@@ -1336,78 +1328,90 @@ function handleMusicUpdate(room) {
   renderLiveRatings(m);
 }
 
-function loadAudio(url) {
-  if(!url) return;
-  if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
-  if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
-  const proxyUrl = `https://undercover-backend-4st4.onrender.com/audio?url=${encodeURIComponent(url)}`;
-  _musicAudio = new Audio();
-  _musicAudio.preload = 'metadata';
-  _musicAudio.src = proxyUrl;
-  _musicAudio.volume = parseFloat(document.getElementById('mp-volume')?.value ?? 0.8);
-  _musicAudio.addEventListener('timeupdate', updateAudioBar);
-  _musicAudio.addEventListener('loadedmetadata', () => {
-    document.getElementById('mp-time-tot').textContent = fmtTime(_musicAudio.duration);
-  });
-  _musicAudio.addEventListener('error', (e) => {
-    toast('Erreur chargement audio — essaie une autre musique', 'err');
-    console.error('Audio error:', e);
-  });
-  document.getElementById('mp-play-btn').textContent = '▶';
-  document.getElementById('mp-bar').style.width = '0%';
-  document.getElementById('mp-time-cur').textContent = '0:00';
-}
+function loadYouTube(track) {
+  const iframe = document.getElementById('yt-iframe');
+  const fallback = document.getElementById('yt-search-fallback');
+  if(!iframe) return;
 
-function togglePlay() {
-  if(!_musicAudio) return;
-  if(_musicAudio.paused) { _musicAudio.play(); document.getElementById('mp-play-btn').textContent = '⏸'; }
-  else { _musicAudio.pause(); document.getElementById('mp-play-btn').textContent = '▶'; }
-}
+  // Try to get YouTube ID
+  const ytId = track.ytId || KNOWN_YT_IDS_CLIENT[track.title] || null;
 
-function playSegment(seg) {
-  if(!_musicAudio) return;
-  if(_musicSegTimer) clearTimeout(_musicSegTimer);
-  if(seg === 'intro') {
-    _musicAudio.currentTime = 0;
-    _musicAudio.play();
-    document.getElementById('mp-play-btn').textContent = '⏸';
-    _musicSegTimer = setTimeout(() => {
-      _musicAudio.pause();
-      document.getElementById('mp-play-btn').textContent = '▶';
-    }, 10000);
+  if(ytId) {
+    // Embed YouTube video
+    iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
+    iframe.style.display = 'block';
+    if(fallback) fallback.style.display = 'none';
   } else {
-    _musicAudio.currentTime = 60;
-    _musicAudio.play();
-    document.getElementById('mp-play-btn').textContent = '⏸';
-    _musicSegTimer = setTimeout(() => {
-      _musicAudio.pause();
-      document.getElementById('mp-play-btn').textContent = '▶';
-    }, 20000);
+    // Fallback: YouTube search link
+    iframe.src = '';
+    iframe.style.display = 'none';
+    if(fallback) {
+      fallback.style.display = 'block';
+      const searchQ = encodeURIComponent(`${track.anime} ${track.type || 'OP'} opening anime full`);
+      document.getElementById('yt-search-link').href = `https://www.youtube.com/results?search_query=${searchQ}`;
+    }
   }
-  beep(440, 0.1); vibe(30);
 }
 
-function seekAudio(e) {
-  if(!_musicAudio || !_musicAudio.duration) return;
-  const rect = document.getElementById('mp-bar-wrap').getBoundingClientRect();
-  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  const time = pct * _musicAudio.duration;
-  if(_musicAudio.fastSeek) _musicAudio.fastSeek(time);
-  else _musicAudio.currentTime = time;
-}
+// Client-side known YouTube IDs
+const KNOWN_YT_IDS_CLIENT = {
+  'Gurenge': 'pmanD_s7G3U',
+  'Guren no Yumiya': 'CID-sYQNCew',
+  'Again': 'IHDmCFMFQnI',
+  'The World': 'NnBbEFMBXmc',
+  'Unravel': 'vKHwQHDkWG0',
+  'Tank!': 'hdcTmpvDgUo',
+  'Colors': 'oFSFkQlA4bk',
+  'Departure': 'LCCDlWCF2SQ',
+  'The Hero': 'FkCFpLHeOuM',
+  '99': 'n3A7XnHMBmo',
+  'Re:Re:': 'b8c0OTqiB-A',
+  'Kaikai Kitan': 'NkO2GlkF1qY',
+  'My Soul Your Beats': 'xHkOz4Gn5uo',
+  'Crossing Field': 'aEs_DTKMIUs',
+  'Blue Bird': 'V0QJZE0J6d4',
+  'Sono Chi no Sadame': 'EzU9OFpSwLQ',
+  'Bloody Stream': 'rGRF4xMpGTQ',
+  'Great Days': 'sflBGSqWD9Y',
+  'Cruel Angel Thesis': '_qDFDGcnKWk',
+  'Connect': 'sHZNMbQgsSI',
+  'We Are!': '0order0J5UE',
+  'Bling-Bang-Bang-Born': 'ZrNpomFTBhM',
+  'Cry Baby': 'MkHAq2MrqDY',
+  'KICK BACK': 'a4pBhH6M7m0',
+  'Specialz': 'tN8-NHU1KFM',
+  'Mixed Nuts': 'bY_UhvOCmAY',
+  'Dango Daikazoku': 'lLNuoBVAW0Q',
+  'Last Dance': 'VIHJx3SXJIQ',
+  'Kaze no Uta': 'eSAUlIxYVg4',
+  'Fly Me to the Moon': 'NFQHQG3QCVk',
+  'Zankyou Chord': 'Nq_j5qsKlMo',
+  'Chainsaw Blood': 'BHRkBsF8BEQ',
+  'Nandemonaiya': 'PDSkFeMVNFs',
+  'Odd Future': 'FpHSOlPHPNo',
+  'Peace Sign': 'KnQF5V0M4HM',
+  'Kaikai Kitan': 'NkO2GlkF1qY',
+  'Oath Sign': 'dCFEOtGqHYw',
+  'Freesia': 'jQYJMN5Qlck',
+  'This Game': 'H_UjhIuXpR0',
+  'Otonoke': 'dgT9LPNkFqM',
+  'Specialz': 'tN8-NHU1KFM',
+  'Dango Daikazoku': 'lLNuoBVAW0Q',
+  'Vanilla Salt': 'fIrRYkJYBKg',
+  'Ichiban no Takaramono': 'nDpA9ByE3xU',
+  'Tabidachi no Hi ni': 'H_cTcDef7H0',
+  'Departures': 'RGkn4QxAGGs',
+  'Deep in Abyss': 'KgPe39QQAdo',
+  'Torches': 'P7ssFOYkQS8',
+  'Styx Helix': 'cqOmLBEFmMI',
+};
 
-function updateAudioBar() {
-  if(!_musicAudio || !_musicAudio.duration) return;
-  const pct = (_musicAudio.currentTime / _musicAudio.duration) * 100;
-  document.getElementById('mp-bar').style.width = pct + '%';
-  document.getElementById('mp-time-cur').textContent = fmtTime(_musicAudio.currentTime);
-}
+function loadAudio(url) { loadYouTube({audioUrl: url}); } // compat shim
 
-function fmtTime(s) {
-  const m = Math.floor(s/60);
-  const sec = Math.floor(s%60).toString().padStart(2,'0');
-  return `${m}:${sec}`;
-}
+
+
+
+
 
 function updateMyRating(val) {
   document.getElementById('mp-rating-val').textContent = parseFloat(val).toFixed(1);
