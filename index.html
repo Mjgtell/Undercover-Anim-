@@ -379,17 +379,17 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .tl-screen{display:flex;flex-direction:column;gap:12px;padding:16px}
 .tl-anime{font-family:var(--fm);font-size:11px;letter-spacing:.15em;color:var(--cyan);text-align:center;text-transform:uppercase}
 .tl-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
-.tl-chars{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:8px 0}
-.tl-char{background:var(--ink2);border:2px solid var(--border);border-radius:10px;overflow:hidden;cursor:grab;user-select:none;transition:transform .15s,border-color .15s;position:relative}
+.tl-chars{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.tl-char{background:var(--ink2);border:2px solid var(--border);border-radius:10px;overflow:hidden;cursor:grab;user-select:none;transition:transform .15s,border-color .15s;position:relative;display:flex;align-items:center;gap:10px;padding-right:12px}
 .tl-char:active{cursor:grabbing;transform:scale(1.05);border-color:var(--gold);z-index:10}
 .tl-char.dragging{opacity:.4;border-color:var(--gold)}
 .tl-char.drag-over{border-color:var(--cyan);transform:scale(1.03)}
-.tl-char img{width:100%;height:120px;object-fit:cover;object-position:top center;display:block}
-.tl-char-name{font-size:10px;font-family:var(--fm);padding:5px 4px;text-align:center;line-height:1.3;color:var(--fg)}
-.tl-rank{position:absolute;top:4px;left:4px;background:var(--gold);color:#000;font-weight:700;font-size:11px;font-family:var(--fm);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-.tl-rank.r1{background:gold;font-size:11px}
-.tl-rank.r2{background:#C0C0C0}
-.tl-rank.r3{background:#CD7F32}
+.tl-char img{width:56px;height:70px;object-fit:cover;object-position:top center;display:block;flex-shrink:0}
+.tl-char-name{font-size:13px;font-weight:700;line-height:1.3;color:var(--fg);flex:1}
+.tl-rank{width:36px;height:36px;background:var(--ink);border:2px solid var(--border);color:var(--muted);font-weight:700;font-size:13px;font-family:var(--fm);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:10px}
+.tl-rank.r1{background:gold;color:#000;border-color:gold}
+.tl-rank.r2{background:#C0C0C0;color:#000;border-color:#C0C0C0}
+.tl-rank.r3{background:#CD7F32;color:#000;border-color:#CD7F32}
 .tl-submit-area{margin-top:8px}
 .tl-players-grid{display:flex;flex-direction:column;gap:10px}
 .tl-player-card{background:var(--ink2);border:1px solid var(--border);border-radius:12px;padding:12px}
@@ -1183,8 +1183,9 @@ function renderFreeTlRanking(room) {
     const img = char?.image || null;
     div.innerHTML = `
       <div class="tl-rank ${rankClass}">${i+1}</div>
-      ${img ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(img)}" onerror="this.style.display='none'" style="width:100%;height:80px;object-fit:cover;object-position:top">` : `<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:22px">🎭</div>`}
-      <div class="tl-char-name">${name}<div style="font-size:8px;color:var(--muted)">${char.anime||''}</div></div>
+      ${img ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(img)}" onerror="this.style.display='none'">` : `<div style="width:56px;height:70px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">🎭</div>`}
+      <div class="tl-char-name">${name}<div style="font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">${char.anime||''}</div></div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--fm)">☰</div>
     `;
     if (!_ftlSubmitted) {
       div.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', name); div.classList.add('dragging'); });
@@ -1298,15 +1299,23 @@ function createRoomMusic() {
   const count = parseInt(document.querySelector('#music-count-chips .chip.on')?.dataset.c || '8');
   const pool = document.querySelector('#music-pool-chips .chip.on')?.dataset.p || 'top';
   window._pendingMusicSettings = { type, count, pool };
+  // Store name for socket init
+  document.getElementById('c-name') && (window._pendingName = name);
   initSocket();
   setLoading(true,'CRÉATION…');
-  socket.once('room:joined', () => showScreen('s-lobby'));
-  socket.emit('room:create', { name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode:'music' });
+  socket.once('connect', () => {
+    socket.once('room:joined', () => showScreen('s-lobby'));
+    socket.emit('room:create', { name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode:'music' });
+  });
+  // If already connected, emit directly
+  if(socket.connected) {
+    socket.once('room:joined', () => showScreen('s-lobby'));
+    socket.emit('room:create', { name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode:'music' });
+  }
 }
 
 function handleMusicUpdate(room) {
   const m = room.music;
-  console.log('handleMusicUpdate phase:', m?.phase, 'tracks:', m?.tracks?.length, 'idx:', m?.currentIndex, 'audioUrl:', m?.tracks?.[m?.currentIndex]?.audioUrl);
   if(!m) return;
   if(m.phase === 'done') { showScreen('s-music-done'); renderMusicRecap(room); return; }
   if(m.phase !== 'playing') return;
@@ -1320,7 +1329,6 @@ function handleMusicUpdate(room) {
   document.getElementById('mp-anime-name').textContent = track.anime;
   document.getElementById('mp-host-controls').style.display = S.isHost ? 'block' : 'none';
   // Load audio if track changed
-  console.log('Current track:', track);
   if(!_musicCurrentTrack || _musicCurrentTrack.id !== track.id) {
     _musicCurrentTrack = track;
     loadAudio(track.audioUrl);
@@ -1333,8 +1341,7 @@ function handleMusicUpdate(room) {
 }
 
 function loadAudio(url) {
-  console.log('loadAudio called with url:', url);
-  if(!url) { toast('URL audio manquante', 'err'); return; }
+  if(!url) return;
   if(_musicAudio) { _musicAudio.pause(); _musicAudio = null; }
   if(_musicSegTimer) { clearTimeout(_musicSegTimer); _musicSegTimer = null; }
   const proxyUrl = `https://undercover-backend-4st4.onrender.com/audio?url=${encodeURIComponent(url)}`;
@@ -1480,8 +1487,12 @@ function createRoomWithMode(mode) {
   if(!name){toast('Entre ton prénom !','err');return;}
   initSocket();
   setLoading(true,'CRÉATION…');
-  socket.once('room:joined', () => showScreen('s-lobby'));
-  socket.emit('room:create',{name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode});
+  const doCreate = () => {
+    socket.once('room:joined', () => showScreen('s-lobby'));
+    socket.emit('room:create',{name, genre:'mix', settings:{mrWhite:false,doubleUndercover:false,wordTimer:false}, mode});
+  };
+  if(socket.connected) doCreate();
+  else socket.once('connect', doCreate);
 }
 
 function addBot(){socket.emit('bot:add');}
@@ -1503,7 +1514,6 @@ function hostStartAuto() {
   if(room.mode === 'tierlist') {
     hostStartTierlist();
   } else if(room.mode === 'freetl') {
-    console.log('freetl:start emitted, S.code=', S.code, 'room=', room);
     socket.emit('freetl:start');
   } else if(room.mode === 'music') {
     const settings = window._pendingMusicSettings || { type: 'both', count: 8, pool: 'top' };
@@ -1781,8 +1791,9 @@ function renderTierlistRanking(room) {
     const rankClass = i===0?'r1':i===1?'r2':i===2?'r3':'';
     div.innerHTML = `
       <div class="tl-rank ${rankClass}">${i+1}</div>
-      ${char.image ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(char.image)}" onerror="this.style.display='none'">` : ''}
+      ${char.image ? `<img src="https://undercover-backend-4st4.onrender.com/img?url=${encodeURIComponent(char.image)}" onerror="this.style.display='none'">` : `<div style="width:56px;height:70px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">🎭</div>`}
       <div class="tl-char-name">${name}</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--fm)">☰</div>
     `;
     if(!_tlSubmitted) {
       div.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', name); div.classList.add('dragging'); });
